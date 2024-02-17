@@ -55,6 +55,18 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(glm)
 target_link_libraries(${PROJECT_NAME} PUBLIC glm)
 
+######################################## STB_IMAGE
+FetchContent_Declare(
+  stb
+  GIT_REPOSITORY 	https://github.com/nothings/stb.git
+  GIT_TAG 			master
+  CONFIGURE_COMMAND ""
+  BUILD_COMMAND 	""
+)
+FetchContent_MakeAvailable(stb)
+target_include_directories(${PROJECT_NAME} PUBLIC 
+$<BUILD_INTERFACE:${stb_SOURCE_DIR}>)
+
 ######################################## Vulkan
 # FetchContent_Declare(
 #         Vulkan
