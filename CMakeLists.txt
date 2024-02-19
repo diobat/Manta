@@ -67,15 +67,19 @@ FetchContent_MakeAvailable(stb)
 target_include_directories(${PROJECT_NAME} PUBLIC 
 $<BUILD_INTERFACE:${stb_SOURCE_DIR}>)
 
-######################################## Vulkan
-# FetchContent_Declare(
-#         Vulkan
-#         GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Headers.git
-#         GIT_TAG vulkan-sdk-1.3.275
-# )
-# FetchContent_MakeAvailable(Vulkan)
-# target_link_libraries(${PROJECT_NAME} PUBLIC Vulkan::Headers)
+######################################## tinyobjloader
+FetchContent_Declare(
+  tiny
+  GIT_REPOSITORY 	https://github.com/tinyobjloader/tinyobjloader.git
+  GIT_TAG 			release
+  CONFIGURE_COMMAND ""
+  BUILD_COMMAND 	""
+)
+FetchContent_MakeAvailable(tiny)
+target_include_directories(${PROJECT_NAME} PUBLIC 
+$<BUILD_INTERFACE:${tiny_SOURCE_DIR}>)
 
+######################################## Vulkan
 find_package(Vulkan REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan::Vulkan)
 ######################################## 
