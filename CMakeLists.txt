@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22 FATAL_ERROR)
 
-project(Vox VERSION 0.1.0 LANGUAGES CXX)
+project(Manta VERSION 0.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -8,16 +8,25 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Add source files
 file(GLOB_RECURSE SOURCE_FILES 
-	${CMAKE_SOURCE_DIR}/src/*.cpp
+  ${CMAKE_SOURCE_DIR}/src/*.cpp
 )
 
+# # Add header files
+# file(GLOB_RECURSE HEADER_FILES 
+#   ${CMAKE_SOURCE_DIR}/src/*.hpp
+# )
+
+
+message(STATUS "Source files: ${SOURCE_FILES}")
+message(STATUS "Header files: ${HEADER_FILES}")
+
 # Add executable
-add_executable(${PROJECT_NAME} ${SOURCE_FILES})
+add_executable(${PROJECT_NAME} ${SOURCE_FILES} ${HEADER_FILES})
 
 # Add include directories
 target_include_directories(${PROJECT_NAME} PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/inc>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>
 )
 
 # Add static libraries folder
