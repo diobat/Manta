@@ -3,21 +3,11 @@
 #include "wrapper/glfw.hpp"
 #include "wrapper/glm.hpp"
 
-#include <fstream>
-#include <array>
-#include <vector>
-#include <unordered_map>
-#include <optional>
-#include <set>
-#include <algorithm>
-#include <limits>
-#include <chrono>
-
+#include <memory>
 #include <iostream>
-#include <stdexcept>
-#include <cstdlib>
 
 #include "rendering/resources/vertex.hpp"
+#include "ECS/ECS.hpp"
 
 
 #ifdef NDEBUG
@@ -40,7 +30,10 @@ struct UniformBufferObject;
 
 class rendering_system {
 public:
+    // Blocking function to run renderer
     void run();
+    // Setters
+    void setScene(std::shared_ptr<Scene> scene);
 private:
     // Window initialization
     void initWindow();
@@ -90,8 +83,6 @@ private:
     void cleanup();
 
 
-
-
     void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
     void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
     void generateMipMaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
@@ -125,6 +116,9 @@ private:
     QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
     VkShaderModule createShaderModule(const std::vector<char>& code);
     uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+
+
+    std::shared_ptr<Scene> _scene;                          // scene
 
     GLFWwindow* _window;                                    // glfw window
     VkInstance _instance;                                   // vulkan instance

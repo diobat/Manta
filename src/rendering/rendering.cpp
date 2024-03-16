@@ -6,6 +6,19 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+#include <fstream>
+#include <array>
+#include <vector>
+#include <unordered_map>
+#include <optional>
+#include <set>
+#include <algorithm>
+#include <limits>
+#include <chrono>
+
+
+#include <stdexcept>
+#include <cstdlib>
 
 // Data
 
@@ -84,7 +97,6 @@ struct UniformBufferObject{
     alignas(16) glm::mat4 view;
     alignas(16) glm::mat4 proj;
 };
-
 
 
 // Rendering system implementation
@@ -1748,3 +1760,8 @@ uint32_t rendering_system::findMemoryType(uint32_t typeFilter, VkMemoryPropertyF
     throw std::runtime_error("failed to find suitable memory type!");
 }
 
+
+void rendering_system::setScene(std::shared_ptr<Scene> scene)
+{
+    _scene = scene;
+}
