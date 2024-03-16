@@ -1,12 +1,18 @@
 
+#include <memory>
+
 #include "ECS/ECS.hpp"
 #include "rendering/rendering.hpp"
 
 
 int main() {
-    rendering_system app;
-    ECS scene;
+    std::shared_ptr<Scene> scene = std::make_shared<Scene>();
 
+    scene->addCamera();
+
+
+    rendering_system app;
+    app.setScene(scene);
 
     try {
         app.run();
