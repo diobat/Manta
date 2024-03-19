@@ -15,10 +15,11 @@
 #include <algorithm>
 #include <limits>
 #include <chrono>
-
-
 #include <stdexcept>
 #include <cstdlib>
+
+#include "helpers/RootDir.hpp"
+#include "ECS/components/camera.hpp"
 
 // Data
 
@@ -26,8 +27,8 @@ const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
-const std::string MODEL_PATH = "res/models/room/viking_room.obj";
-const std::string TEXTURE_PATH = "res/models/room/viking_room.png";
+const std::string MODEL_PATH = "X:/Repos/Manta/res/models/room/viking_room.obj";
+const std::string TEXTURE_PATH = "X:/Repos/Manta/res/models/room/viking_room.png";
 
 const std::vector<const char*> validationLayers = {
     "VK_LAYER_KHRONOS_validation"
@@ -59,7 +60,9 @@ static std::vector<char> readFile(const std::string& filename)
 {
     std::ifstream file;
 
-    file.open(filename, std::ios::ate | std::ios::binary);
+    std::string fullpath = ROOT_DIR + filename;
+
+    file.open(fullpath, std::ios::ate | std::ios::binary);
 
     if(!file.is_open())
     {
@@ -99,15 +102,25 @@ struct UniformBufferObject{
 };
 
 
-// Rendering system implementation
-void rendering_system::run()
+rendering_system::rendering_system()
+{
+    init();
+}
+
+// // Rendering system implementation
+// void rendering_system::run()
+// {
+//     initWindow();
+//     initVulkan();
+//     mainLoop();
+//     cleanup();
+// }
+
+void rendering_system::init()
 {
     initWindow();
     initVulkan();
-    mainLoop();
-    cleanup();
 }
-
 
 void rendering_system::initWindow()
 {
@@ -1393,15 +1406,14 @@ void rendering_system::createInstance()
     }
 }
 
-void rendering_system::mainLoop() 
-{
-    while (!glfwWindowShouldClose(_window)) {
-        glfwPollEvents();
-        drawFrame();
-    }
+// void rendering_system::mainLoop() 
+// {
+//     while (!glfwWindowShouldClose(_window)) {
+//         glfwPollEvents();
+//         drawFrame();
+//     }
 
-    vkDeviceWaitIdle(_device);
-}
+// }
 
 void rendering_system::drawFrame() 
 {
@@ -1475,15 +1487,16 @@ void rendering_system::drawFrame()
 
 void rendering_system::updateUniformBuffer(uint32_t currentImage)
 {
-    static auto startTime = std::chrono::high_resolution_clock::now();
-
-    auto currentTime = std::chrono::high_resolution_clock::now();
-    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
     UniformBufferObject ubo{};
-    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.proj = glm::perspective(glm::radians(45.0f), _swapChainExtent.width / (float) _swapChainExtent.height, 0.1f, 10.0f);
+
+    entt::entity activeCamera = _scene->getActiveCamera();
+
+    const MVPMatrix& mvp = recalculateMVP(_scene->getRegistry(), activeCamera);
+
+    ubo.view = mvp.view;
+    ubo.model = mvp.model;
+    ubo.proj = mvp.projection;
     ubo.proj[1][1] *= -1;
 
     memcpy(_uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
@@ -1491,6 +1504,7 @@ void rendering_system::updateUniformBuffer(uint32_t currentImage)
 
 void rendering_system::cleanup() 
 {
+    vkDeviceWaitIdle(_device);
     cleanupSwapChain();
 
     vkDestroySampler(_device, _textureSampler, nullptr);
