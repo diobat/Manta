@@ -6,6 +6,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Configure assets header file
+configure_file(src/helpers/RootDir.h.in src/helpers/RootDir.hpp)
+
 # Add source files
 file(GLOB_RECURSE SOURCE_FILES 
   ${CMAKE_SOURCE_DIR}/src/*.cpp
@@ -27,6 +30,7 @@ add_executable(${PROJECT_NAME} ${SOURCE_FILES} ${HEADER_FILES})
 target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/inc>
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/src>
 )
 
 # Add static libraries folder
