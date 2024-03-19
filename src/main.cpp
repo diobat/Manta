@@ -1,21 +1,14 @@
 
 #include <memory>
 
-#include "ECS/ECS.hpp"
-#include "rendering/rendering.hpp"
+#include "core/Manta.hpp"
 
 
 int main() {
-    std::shared_ptr<Scene> scene = std::make_shared<Scene>();
-
-    scene->addCamera();
-
-
-    rendering_system app;
-    app.setScene(scene);
+    Manta engine;
 
     try {
-        app.run();
+        engine.run();
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
         return EXIT_FAILURE;
