@@ -92,6 +92,21 @@ FetchContent_MakeAvailable(tiny)
 target_include_directories(${PROJECT_NAME} PUBLIC 
 $<BUILD_INTERFACE:${tiny_SOURCE_DIR}>)
 
+######################################## ASSIMP
+FetchContent_Declare(
+  assimp
+  GIT_REPOSITORY 	https://github.com/assimp/assimp.git
+  GIT_TAG        	v5.3.0
+)
+option(ASSIMP_BUILD_TESTS OFF)
+set(ASSIMP_NO_EXPORT ON CACHE BOOL "Disable Assimp's export functionality")
+set(ASSIMP_BUILD_ALL_EXPORTERS_BY_DEFAULT OFF CACHE BOOL "Disable Assimp's export functionality")
+option(ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT OFF)
+set(ASSIMP_BUILD_OBJ_IMPORTER ON)
+set(ASSIMP_BUILD_GLTF_IMPORTER ON)
+FetchContent_MakeAvailable(assimp)
+target_link_libraries(${PROJECT_NAME} PUBLIC assimp)
+
 ######################################## Vulkan
 find_package(Vulkan REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan::Vulkan)
