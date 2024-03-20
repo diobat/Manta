@@ -11,15 +11,15 @@ namespace{
     constexpr float rotationSpeed = 0.0005f;
 }
 
-entt::entity createCamera(entt::registry& registry, const glm::vec3& positionValue, const glm::vec3& rotationValue)
+entt::entity createCamera(entt::registry& registry, const glm::vec3& positionValue, const glm::vec2& rotationValue)
 {
     entt::entity entity = registry.create();
 
     registry.emplace<position>(entity, positionValue);
-    registry.emplace<rotation>(entity, glm::normalize(rotationValue));
+    registry.emplace<rotation>(entity, rotationValue);
 
     glm::mat4 model = glm::mat4(1.0f);
-    glm::mat4 view = glm::lookAt(positionValue, positionValue + rotationValue, glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::mat4 view = glm::mat4(1.0f);
     glm::mat4 proj = glm::perspective(fov, width / height, nearPlane, farPlane);
 
     registry.emplace<MVPMatrix>(entity, model, view, proj, proj * view);
