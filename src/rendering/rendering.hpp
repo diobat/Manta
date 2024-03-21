@@ -30,7 +30,7 @@ struct UniformBufferObject;
 
 class rendering_system {
 public:
-    rendering_system();
+    rendering_system(std::shared_ptr<Scene> scene);
 
     // Draw a frame
     void drawFrame();

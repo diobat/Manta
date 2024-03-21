@@ -16,7 +16,7 @@ std::vector<unsigned int> getIndexData(const aiMesh* mesh);
 
 entt::entity createModel(entt::registry& registry, const std::string& path)
 {
-    auto modelEntity = registry.create();
+    entt::entity modelEntity = registry.create();
     Model& model = registry.emplace<Model>(modelEntity);
 
     std::string absolutePath = ROOT_DIR + path; 
@@ -206,5 +206,17 @@ std::vector<entt::entity> getMeshes(entt::registry& registry, const std::string&
             meshes.push_back(entity);
         }
     }
+    return meshes;
+}
+
+std::vector<Mesh> getMeshData(entt::registry& registry, const Model& model)
+{
+    std::vector<Mesh> meshes;
+
+    for(auto mesh : model.meshes)
+    {
+        meshes.push_back(registry.get<Mesh>(mesh));
+    }
+
     return meshes;
 }

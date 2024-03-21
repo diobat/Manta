@@ -27,3 +27,5 @@ entt::entity createModel(entt::registry& registry, const std::string& path);
 
 bool isMeshLoaded(entt::registry& registry, const std::string& path);
 std::vector<entt::entity> getMeshes(entt::registry& registry, const std::string& path);
+
+std::vector<Mesh> getMeshData(entt::registry, const Model& model);

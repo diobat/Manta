@@ -20,6 +20,7 @@
 
 #include "helpers/RootDir.hpp"
 #include "ECS/components/camera.hpp"
+#include "ECS/components/model.hpp"
 
 // Data
 
@@ -27,7 +28,7 @@ const uint32_t WIDTH = 1920;
 const uint32_t HEIGHT = 1080;
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
-const std::string MODEL_PATH = "X:/Repos/Manta/res/models/room/viking_room.obj";
+const std::string MODEL_PATH = "res/models/room/viking_room.obj";
 const std::string TEXTURE_PATH = "X:/Repos/Manta/res/models/room/viking_room.png";
 
 const std::vector<const char*> validationLayers = {
@@ -102,19 +103,11 @@ struct UniformBufferObject{
 };
 
 
-rendering_system::rendering_system()
+rendering_system::rendering_system(std::shared_ptr<Scene> scene)
 {
+    _scene = scene;
     init();
 }
-
-// // Rendering system implementation
-// void rendering_system::run()
-// {
-//     initWindow();
-//     initVulkan();
-//     mainLoop();
-//     cleanup();
-// }
 
 void rendering_system::init()
 {
@@ -168,42 +161,12 @@ void rendering_system::initVulkan()
 
 void rendering_system::loadModel()
 {
-    tinyobj::attrib_t attrib;
-    std::vector<tinyobj::shape_t> shapes;
-    std::vector<tinyobj::material_t> materials;
-    std::string warn, err;
+    entt::entity modelEntity = createModel(_scene->getRegistry(), MODEL_PATH);
+    Model& model = _scene->getRegistry().get<Model>(modelEntity);
 
-    if(!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, MODEL_PATH.c_str())){
-        throw std::runtime_error(warn + err);
-    }
-
-    std::unordered_map<Vertex, uint32_t> uniqueVertices{};
-
-    for (const auto& shape : shapes) {
-        for (const auto& index : shape.mesh.indices) {
-            Vertex vertex{};
-
-            vertex.Position = {
-                attrib.vertices[3 * index.vertex_index + 0],
-                attrib.vertices[3 * index.vertex_index + 1],
-                attrib.vertices[3 * index.vertex_index + 2]
-            };
-
-            vertex.TexCoords = {
-                attrib.texcoords[2 * index.texcoord_index + 0],
-                1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
-            };
-
-            vertex.Color = {1.0f, 1.0f, 1.0f};
-
-            if(uniqueVertices.count(vertex) == 0){
-                uniqueVertices[vertex] = static_cast<uint32_t>(_vertices.size());
-                _vertices.push_back(vertex);
-            }
-
-            _indices.push_back(uniqueVertices[vertex]);
-        }
-    }    
+    Mesh& mesh = _scene->getRegistry().get<Mesh>(model.meshes[0]);
+    _vertices = mesh.vertices;
+    _indices = mesh.indices;
 }
 
 bool rendering_system::hasStencilComponent(VkFormat format)
@@ -1405,15 +1368,6 @@ void rendering_system::createInstance()
         throw std::runtime_error("failed to create instance!");
     }
 }
-
-// void rendering_system::mainLoop() 
-// {
-//     while (!glfwWindowShouldClose(_window)) {
-//         glfwPollEvents();
-//         drawFrame();
-//     }
-
-// }
 
 void rendering_system::drawFrame() 
 {

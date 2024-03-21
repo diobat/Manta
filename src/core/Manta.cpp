@@ -19,7 +19,7 @@ void Manta::run()
 void Manta::init()
 {
     m_scene = std::make_shared<Scene>();
-    m_rendering = std::make_shared<rendering_system>();
+    m_rendering = std::make_shared<rendering_system>(m_scene);
     m_user_input = std::make_shared<user_input_system>(m_rendering->getWindow());
     m_user_input->bindToScene(m_scene);
 
