@@ -68,6 +68,17 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(glm)
 target_link_libraries(${PROJECT_NAME} PUBLIC glm)
 
+######################################## ENTT
+
+FetchContent_Declare(
+  entt
+  GIT_REPOSITORY  https://github.com/skypjack/entt.git
+  GIT_TAG         v3.13.x
+)
+FetchContent_MakeAvailable(entt)
+
+target_link_libraries(${PROJECT_NAME} PUBLIC EnTT::EnTT)
+
 ######################################## STB_IMAGE
 FetchContent_Declare(
   stb
@@ -79,18 +90,6 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(stb)
 target_include_directories(${PROJECT_NAME} PUBLIC 
 $<BUILD_INTERFACE:${stb_SOURCE_DIR}>)
-
-######################################## tinyobjloader
-FetchContent_Declare(
-  tiny
-  GIT_REPOSITORY 	https://github.com/tinyobjloader/tinyobjloader.git
-  GIT_TAG 			release
-  CONFIGURE_COMMAND ""
-  BUILD_COMMAND 	""
-)
-FetchContent_MakeAvailable(tiny)
-target_include_directories(${PROJECT_NAME} PUBLIC 
-$<BUILD_INTERFACE:${tiny_SOURCE_DIR}>)
 
 ######################################## ASSIMP
 FetchContent_Declare(

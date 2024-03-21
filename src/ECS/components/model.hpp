@@ -1,7 +1,7 @@
 #pragma once
 
 // External includes
-#include <entt.hpp>
+#include <entt/entt.hpp>
 #include <glm/glm.hpp>
 
 // STD includes
