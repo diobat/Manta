@@ -19,14 +19,15 @@ struct memoryBuffer
     void* mappedTo;
 };
 
-
-
 class memory_system
 {
 public:
-    memory_system(rendering_system* core, entt::registry& registry, VkDevice& logicalDevice, VkPhysicalDevice& physicalDevice);
+    memory_system(rendering_system* core, entt::registry& registry, VkDevice& logicalDevice);
 
-    // Resource creation
+    // Buffer creation
+    memoryBuffer createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties);
+
+    // Buffer resource creation
     memoryBuffer createVertexBuffer(std::vector<Vertex> vertices);
     memoryBuffer createIndexBuffer(std::vector<uint32_t> indices);
 
@@ -44,17 +45,16 @@ public:
         return buffers;
     }
 
+    uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+
     void deleteBuffer(VkBuffer buffer, VkDeviceMemory memory);
+    void deleteBuffer(memoryBuffer buffer);
 private:
 
-    memoryBuffer createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties);
     void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
-
-    uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
     rendering_system* _core;
     entt::registry& _registry;  
     VkDevice& _logicalDevice;
-    VkPhysicalDevice& _physicalDevice;
-
+    // VkPhysicalDevice& _physicalDevice;
 };
