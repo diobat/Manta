@@ -1,8 +1,8 @@
 
 #include <memory>
+#include <iostream>
 
 #include "core/Manta.hpp"
-
 
 int main() {
     Manta engine;
