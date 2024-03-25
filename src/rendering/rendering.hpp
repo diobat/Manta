@@ -8,6 +8,8 @@
 
 #include "rendering/resources/vertex.hpp"
 #include "ECS/ECS.hpp"
+#include "rendering/resources/commandBuffer.hpp"
+#include "rendering/resources/memory.hpp"
 
 
 #ifdef NDEBUG
@@ -44,6 +46,9 @@ public:
     void setScene(std::shared_ptr<Scene> scene);
     // Getters
     GLFWwindow* getWindow() { return _window; }             // window getter
+    memory_system& getMemory() { return _memory; }          // memory system getter 
+    command_buffer_system& getCommandBuffer() { return _commandBuffer; } // command buffer system getter
+
 private:
     // Initialization
     void init();
@@ -133,6 +138,10 @@ private:
 
     std::shared_ptr<Scene> _scene;                          // scene
 
+    memory_system _memory;                                  // memory system
+    command_buffer_system _commandBuffer;                   // command buffer system
+
+    
     GLFWwindow* _window;                                    // glfw window
     VkInstance _instance;                                   // vulkan instance
     VkDebugUtilsMessengerEXT _debugMessenger;               // debug messenger
@@ -165,14 +174,19 @@ private:
 
     std::vector<Vertex> _vertices;                          // vertices
     std::vector<uint32_t> _indices;                         // indices
-    VkBuffer _vertexBuffer;                                 // vertex buffer
-    VkDeviceMemory _vertexBufferMemory;                     // vertex buffer memory
-    VkBuffer _indexBuffer;                                  // index buffer
-    VkDeviceMemory _indexBufferMemory;                      // index buffer memory
 
-    std::vector<VkBuffer> _uniformBuffers;                  // uniform buffers
-    std::vector<VkDeviceMemory> _uniformBuffersMemory;      // uniform buffers memory
-    std::vector<void*> _uniformBuffersMapped;               // uniform buffers mapped
+    memoryBuffer _vertexBuffer;                             // vertex buffer
+    memoryBuffer _indexBuffer;                              // index buffer
+
+    // VkBuffer _vertexBuffer;                                 // vertex buffer
+    // VkDeviceMemory _vertexBufferMemory;                     // vertex buffer memory
+    // VkBuffer _indexBuffer;                                  // index buffer
+    // VkDeviceMemory _indexBufferMemory;                      // index buffer memory
+
+    std::vector<memoryBuffer> _uniformBuffers;              // uniform buffers
+    // std::vector<VkBuffer> _uniformBuffers;                  // uniform buffers
+    // std::vector<VkDeviceMemory> _uniformBuffersMemory;      // uniform buffers memory
+    // std::vector<void*> _uniformBuffersMapped;               // uniform buffers mapped
 
     VkDescriptorPool _descriptorPool;                       // descriptor pool
     std::vector<VkDescriptorSet> _descriptorSets;           // descriptor sets
