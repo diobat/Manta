@@ -166,11 +166,6 @@ void rendering_system::loadModel()
     _indices = mesh.indices;
 }
 
-// bool rendering_system::hasStencilComponent(VkFormat format)
-// {
-//     return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
-// }
-
 VkFormat rendering_system::findDepthFormat()
 {
     return findSupportedFormat(
