@@ -10,6 +10,7 @@
 #include "ECS/ECS.hpp"
 #include "rendering/resources/commandBuffer.hpp"
 #include "rendering/resources/memory.hpp"
+#include "rendering/resources/texture.hpp"
 
 
 #ifdef NDEBUG
@@ -45,9 +46,12 @@ public:
     // Setters
     void setScene(std::shared_ptr<Scene> scene);
     // Getters
-    GLFWwindow* getWindow() { return _window; }             // window getter
-    memory_system& getMemory() { return _memory; }          // memory system getter 
-    command_buffer_system& getCommandBuffer() { return _commandBuffer; } // command buffer system getter
+    GLFWwindow* getWindow() { return _window; }                                     // window getter
+    VkDevice getLogicalDevice() { return _device; }                                 // logical device getter
+    VkPhysicalDevice getPhysicalDevice() { return _physicalDevice; }                // physical device getter
+    memory_system& getMemorySystem() { return _memory; }                            // memory system getter 
+    command_buffer_system& getCommandBufferSystem() { return _commandBuffer; }      // command buffer system getter
+    texture_system& getTextureSystem() { return _texture; }                         // texture system getter
 
 private:
     // Initialization
@@ -90,22 +94,16 @@ private:
         void createFramebuffers();
 
         // Resource setup
-        void createTextureImage();
-            void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
-                uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
-            void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels);
-                    bool hasStencilComponent(VkFormat format);
-            void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
-            void generateMipMaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
-        void createTextureImageView();
-            VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels);
+        // void createTextureImage();
+            // void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
+            // void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels);
+                    // bool hasStencilComponent(VkFormat format);
+            // void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+            // void generateMipMaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
+        // void createTextureImageView();
+            // VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels);
         void createTextureSampler();
         void loadModel();
-        void createVertexBuffer();
-            void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
-            void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
-        void createIndexBuffer();
-        void createUniformBuffers();
         void createDescriptorPool();
         void createDescriptorSets();
         void createCommandBuffers();
@@ -116,10 +114,6 @@ private:
         //void drawFrame();
             void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
             void updateUniformBuffer(uint32_t currentImage);
-
-    // Graphics queue command submission
-    VkCommandBuffer beginSingleTimeCommands();
-    void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 
     // Swap chain recreation
     void recreateSwapChain();
@@ -140,6 +134,7 @@ private:
 
     memory_system _memory;                                  // memory system
     command_buffer_system _commandBuffer;                   // command buffer system
+    texture_system _texture;                                // texture system
 
     
     GLFWwindow* _window;                                    // glfw window
@@ -178,27 +173,22 @@ private:
     memoryBuffer _vertexBuffer;                             // vertex buffer
     memoryBuffer _indexBuffer;                              // index buffer
 
-    // VkBuffer _vertexBuffer;                                 // vertex buffer
-    // VkDeviceMemory _vertexBufferMemory;                     // vertex buffer memory
-    // VkBuffer _indexBuffer;                                  // index buffer
-    // VkDeviceMemory _indexBufferMemory;                      // index buffer memory
-
     std::vector<memoryBuffer> _uniformBuffers;              // uniform buffers
-    // std::vector<VkBuffer> _uniformBuffers;                  // uniform buffers
-    // std::vector<VkDeviceMemory> _uniformBuffersMemory;      // uniform buffers memory
-    // std::vector<void*> _uniformBuffersMapped;               // uniform buffers mapped
 
     VkDescriptorPool _descriptorPool;                       // descriptor pool
     std::vector<VkDescriptorSet> _descriptorSets;           // descriptor sets
 
     uint32_t _mipLevels = 1;                                // mip levels
-    VkImage _textureImage;                                  // texture image
-    VkDeviceMemory _textureImageMemory;                     // texture image memory
 
-    VkImageView _textureImageView;                          // texture image view
+    image _textureImage;                                    // texture image
+    // VkImage _textureImage;                                  // texture image
+    // VkDeviceMemory _textureImageMemory;                     // texture image memory
+    // VkImageView _textureImageView;                          // texture image view
+
     VkSampler _textureSampler;                              // texture sampler
 
-    VkImage _depthImage;                                    // depth image
-    VkDeviceMemory _depthImageMemory;                       // depth image memory
-    VkImageView _depthImageView;                            // depth image view
+    image _depthImage;                                         // depth image
+    // VkImage _depthImage;                                    // depth image
+    // VkDeviceMemory _depthImageMemory;                       // depth image memory
+    // VkImageView _depthImageView;                            // depth image view
 };
