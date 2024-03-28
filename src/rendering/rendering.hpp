@@ -11,6 +11,7 @@
 #include "rendering/resources/commandBuffer.hpp"
 #include "rendering/resources/memory.hpp"
 #include "rendering/resources/texture.hpp"
+#include "rendering/shaderManager.hpp"
 
 
 #ifdef NDEBUG
@@ -89,6 +90,7 @@ private:
         void createDescriptorSetLayout();
         void createGraphicsPipeline();
             VkShaderModule createShaderModule(const std::vector<char>& code);
+            VkShaderModule createShaderModule(const std::vector<uint32_t>& code); // Overload of the above function
         void createCommandPool();
         void createDepthResources();
         void createFramebuffers();
@@ -127,6 +129,7 @@ private:
     memory_system _memory;                                  // memory system
     command_buffer_system _commandBuffer;                   // command buffer system
     texture_system _texture;                                // texture system
+    shader_system _shaders;                                 // shader system
 
     
     GLFWwindow* _window;                                    // glfw window

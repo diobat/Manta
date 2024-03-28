@@ -99,7 +99,8 @@ rendering_system::rendering_system(std::shared_ptr<Scene> scene)    :
     _scene(scene),
     _memory(this, scene->getRegistry(), _device),
     _commandBuffer(_device, _commandPool , _graphicsQueue),
-    _texture(this)
+    _texture(this),
+    _shaders(this)
 {
     init();
 }
@@ -495,11 +496,27 @@ void rendering_system::createCommandPool()
 
 void rendering_system::createGraphicsPipeline() 
 {
-    auto vertShaderCode = readFile("res/shaders/vert.spv");
-    auto fragShaderCode = readFile("res/shaders/frag.spv");
+    // _shaders.compileShader("res/shaders/shader.vert");
+    // _shaders.compileShader("res/shaders/shader.frag");
 
-    VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
-    VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
+    std::string vertShaderFile = "res/shaders/shader.vert";
+    std::string fragShaderFile = "res/shaders/shader.frag";
+
+    // std::string vertShaderCodePath = "res/shaders/vert.spv";
+    // std::string fragShaderCodePath = "res/shaders/frag.spv";
+
+    // auto vertShaderCode = _shaders.readFile(ROOT_DIR + vertShaderCodePath);
+    // auto fragShaderCode = _shaders.readFile(ROOT_DIR + fragShaderCodePath);
+
+    // auto vertShaderCode = readFile("res/shaders/vert.spv");
+    // auto fragShaderCode = readFile("res/shaders/frag.spv");
+
+    // // Primeiro fazer uma funcçao para criar um shader module, depois expandir para a pipeline toda
+    // VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
+    // VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
+
+    VkShaderModule vertShaderModule = _shaders.compileShader(ROOT_DIR + vertShaderFile).VKmodule;
+    VkShaderModule fragShaderModule = _shaders.compileShader(ROOT_DIR + fragShaderFile).VKmodule;
 
     VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
     vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -1310,6 +1327,25 @@ VkShaderModule rendering_system::createShaderModule(const std::vector<char>& cod
 
     return shaderModule;
 }
+
+// Overload of the above function to ease transition to SPIR-V  
+VkShaderModule rendering_system::createShaderModule(const std::vector<uint32_t>& code)
+{
+    VkShaderModuleCreateInfo createInfo{};
+    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    createInfo.codeSize = code.size();
+    createInfo.pCode = code.data();
+
+    VkShaderModule shaderModule;
+    if(vkCreateShaderModule(_device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS)
+    {
+        throw std::runtime_error("failed to create shader module!");
+    }
+
+    return shaderModule;
+
+}
+
 
 void rendering_system::setScene(std::shared_ptr<Scene> scene)
 {

@@ -106,6 +106,33 @@ set(ASSIMP_BUILD_GLTF_IMPORTER ON)
 FetchContent_MakeAvailable(assimp)
 target_link_libraries(${PROJECT_NAME} PUBLIC assimp)
 
+######################################## glslang
+
+FetchContent_Declare(
+    glslang
+    GIT_REPOSITORY https://github.com/KhronosGroup/glslang.git
+    GIT_TAG main  # Adjust the tag or commit hash as needed
+)
+set(GLSLANG_BUILD_TESTS OFF)
+# set(GLSLANG_BUILD_EXTERNAL OFF)
+# set(GLSLANG_BUILD_ESSL OFF)
+# set(GLSLANG_BUILD_HLSL OFF)
+# set(GLSLANG_BUILD_SPVREMAPPER OFF)
+set(GLSLANG_BUILD_SPVTOOLS ON)
+# set(GLSLANG_BUILD_AMD_EXTENSIONS OFF)
+# set(GLSLANG_BUILD_GLSLANG OFF)
+# set(GLSLANG_BUILD_OGLCOMPILER OFF)
+set(GLSLANG_BUILD_VULKAN ON)
+# set(GLSLANG_BUILD_PCH_SUPPORT OFF)
+set(GLSLANG_BUILD_SHARED OFF)
+set(GLSLANG_BUILD_STATIC ON)
+# set(GLSLANG_INSTALL OFF)
+set(GLSLANG_VALIDATION_LAYER ON)
+FetchContent_MakeAvailable(glslang)
+
+target_link_libraries(${PROJECT_NAME} PUBLIC glslang SPIRV glslang-default-resource-limits)
+
+
 ######################################## Vulkan
 find_package(Vulkan REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan::Vulkan)
