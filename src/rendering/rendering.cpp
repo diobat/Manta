@@ -496,24 +496,8 @@ void rendering_system::createCommandPool()
 
 void rendering_system::createGraphicsPipeline() 
 {
-    // _shaders.compileShader("res/shaders/shader.vert");
-    // _shaders.compileShader("res/shaders/shader.frag");
-
     std::string vertShaderFile = "res/shaders/shader.vert";
     std::string fragShaderFile = "res/shaders/shader.frag";
-
-    // std::string vertShaderCodePath = "res/shaders/vert.spv";
-    // std::string fragShaderCodePath = "res/shaders/frag.spv";
-
-    // auto vertShaderCode = _shaders.readFile(ROOT_DIR + vertShaderCodePath);
-    // auto fragShaderCode = _shaders.readFile(ROOT_DIR + fragShaderCodePath);
-
-    // auto vertShaderCode = readFile("res/shaders/vert.spv");
-    // auto fragShaderCode = readFile("res/shaders/frag.spv");
-
-    // // Primeiro fazer uma funcçao para criar um shader module, depois expandir para a pipeline toda
-    // VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
-    // VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
 
     VkShaderModule vertShaderModule = _shaders.compileShader(ROOT_DIR + vertShaderFile).VKmodule;
     VkShaderModule fragShaderModule = _shaders.compileShader(ROOT_DIR + fragShaderFile).VKmodule;
@@ -1055,7 +1039,6 @@ void rendering_system::drawFrame()
 
 void rendering_system::updateUniformBuffer(uint32_t currentImage)
 {
-
     UniformBufferObject ubo{};
 
     entt::entity activeCamera = _scene->getActiveCamera();
@@ -1345,7 +1328,6 @@ VkShaderModule rendering_system::createShaderModule(const std::vector<uint32_t>&
     return shaderModule;
 
 }
-
 
 void rendering_system::setScene(std::shared_ptr<Scene> scene)
 {
