@@ -15,7 +15,6 @@
 
 class rendering_system;
 
-
 enum class shaderType
 {
     VERTEX,
@@ -33,6 +32,12 @@ struct shaderModule
     std::vector<uint32_t> code;
 };
 
+
+struct shaderProgram
+{
+    std::array<shaderModule, 5> shaders;
+};
+
 // For clarification, a shader is a singular shader file, while a shader program is a collection of shaders that are linked together
 
 class shader_system
@@ -43,13 +48,20 @@ public:
     void scanFolderRecursive(const std::string& path);
 
     shaderModule compileShader(const std::string& shaderFilename);
-    std::string readFile(const std::string& filename);
+    shaderModule loadShader(const std::string& shaderFilename);
+
+    const shaderProgram& getShaderProgram(const std::string& name) const;
 
 private:
-    bool deleteOldShader(const std::string& path);
+    std::string readGLSLFile(const std::string& filename) const;
+    std::vector<char> readSPIRVFile(const std::string& filename) const ;
+
+    bool deleteOldShaderFile(const std::string& path);
     bool isCompileNecessary(const std::string& path);
 
-    shaderType getShaderType(const std::string& path);
+    shaderType getShaderType(const std::string& path) const;
+
+    std::unordered_map<std::string, shaderProgram> _shaderPrograms;
 
     rendering_system* _core;
 };

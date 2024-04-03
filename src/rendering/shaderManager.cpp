@@ -28,31 +28,25 @@ shader_system::shader_system(rendering_system* core)  :
     ;
 }
 
-
 void shader_system::scanFolderRecursive(const std::string& path)
 {
 
     std::string shaderProgramName;
-
-    std::string vertexShaderFilename = "";
-    std::string fragmentShaderFilename = "";
-    std::string geometryShaderFilename = "";
-    std::string tessellationControlShaderFilename = "";
-    std::string tessellationEvaluationShaderFilename = "";
+    // the name of the folder at this location is the name of the shader program
+    shaderProgramName = std::filesystem::path(path).stem().string();
 
     std::vector<std::string> shaderFilenames;
     std::set<std::string> unusedExtensions = shaderExtensions;
 
-
     for (const auto& entry : std::filesystem::directory_iterator(path))
     {
+
         if (entry.is_directory())
         {
             scanFolderRecursive(entry.path().string());
         }
         else if(entry.is_regular_file())
         {
-            shaderProgramName = entry.path().parent_path().stem().string();
             std::string extension = entry.path().extension().string();
 
             if(unusedExtensions.find(extension) != unusedExtensions.end())
@@ -66,83 +60,42 @@ void shader_system::scanFolderRecursive(const std::string& path)
             }
             
         }
-        // The files have now been gathered and are also unique (no two shaders of the same type in the same folder)
+    }
 
-        // Now we verify for each file if it is necessary to compile it
-        // We do this by checking if the .spv file exists and if it has a newer timestamp than the source file
-        // If the .spv file does not exist, we compile the shader
-
-        for(const auto& shaderFilename : shaderFilenames)
+    // After evaluating all the entries in the directory, 
+    // ch-eck if at least vertex and fragment shaders are present
+    if(     unusedExtensions.size() <  2 || 
+            unusedExtensions.find(".vert") != unusedExtensions.end() || 
+            unusedExtensions.find(".frag") != unusedExtensions.end())
+    {
+        std::stringstream ss;
+        ss << "Missing required shaders for shader program: " << shaderProgramName << std::endl;
+        for(const auto& ext : unusedExtensions)
         {
-            if(isCompileNecessary(shaderFilename))
-            {
+            ss << ext << std::endl;
+        }
+        return;
+    }
 
-            }
-            else
-            {
-                // Load the shader from the .spv file
+    shaderProgram program;
 
-            }
+    for(const auto& shaderFilename : shaderFilenames)
+    {
+        shaderModule module;
 
+        if(isCompileNecessary(shaderFilename))
+        {
+            module = compileShader(shaderFilename);
+        }
+        else
+        {
+            module = loadShader(shaderFilename);
         }
 
-
-
-
+        // Put it into the program struct
+        program.shaders[static_cast<int>(module.type)] = module;
     }
-}
-
-
-bool shader_system::isCompileNecessary(const std::string& path)
-{
-    std::filesystem::path sourcePath(path);
-    std::filesystem::path spvPath(sourcePath.stem().string() + ".spv");
-
-    if(!std::filesystem::exists(spvPath))
-    {
-        return true;
-    }
-
-    if(std::filesystem::last_write_time(spvPath) < std::filesystem::last_write_time(sourcePath))
-    {
-        return true;
-    }
-
-    return false;
-}
-
-
-std::string shader_system::readFile(const std::string& filename)
-{
-    std::ifstream file(filename, std::ios::ate | std::ios::binary);
-
-    if(!file.is_open())
-    {
-        throw std::runtime_error("Failed to open file: " + filename);
-    }
-
-    size_t fileSize = (size_t) file.tellg();
-    std::string buffer(fileSize, ' ');
-    
-    file.seekg(0);
-    file.read(buffer.data(), fileSize);
-
-    file.close();
-
-    return buffer;
-}
-
-bool shader_system::deleteOldShader(const std::string& path)
-{
-    std::filesystem::path sourcePath(path);
-    std::filesystem::path spvPath(sourcePath.stem().string() + ".spv");
-
-    if(std::filesystem::exists(spvPath))
-    {
-        std::filesystem::remove(spvPath);
-        return true;
-    }
-    return false;
+    _shaderPrograms[shaderProgramName] = program;\
 }
 
 shaderModule shader_system::compileShader(const std::string& path)
@@ -150,7 +103,7 @@ shaderModule shader_system::compileShader(const std::string& path)
     shaderModule module;
 
     // Delete the old shader
-    deleteOldShader(path);
+    deleteOldShaderFile(path);
 
     glslang::InitializeProcess();
 
@@ -184,7 +137,7 @@ shaderModule shader_system::compileShader(const std::string& path)
     glslang::TShader shader{stage};
     shader.setDebugInfo(true);
 
-    std::string shaderCode = readFile(path);
+    std::string shaderCode = readGLSLFile(path);
     const char* shaderCodeCStr = shaderCode.data();
 
     shader.setStrings(&shaderCodeCStr, 1);
@@ -208,9 +161,6 @@ shaderModule shader_system::compileShader(const std::string& path)
 
         std::cerr << "Shader info log:" << shader.getInfoLog() << std::endl;
         std::cerr << "Shader debug log:" << shader.getInfoDebugLog() << std::endl;
-
-        // std::string s1 = shader.getInfoLog();
-        // std::string s2 = shader.getInfoDebugLog();
         throw std::runtime_error("Shader compilation failed. Check the error logs for details.");
         ;
     }
@@ -250,7 +200,7 @@ shaderModule shader_system::compileShader(const std::string& path)
     glslang::FinalizeProcess();
 
 
-
+    // Create the vulkan shader module
     VkShaderModuleCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     createInfo.codeSize = module.code.size() * sizeof(uint32_t);
@@ -258,13 +208,136 @@ shaderModule shader_system::compileShader(const std::string& path)
 
     if(vkCreateShaderModule(_core->getLogicalDevice(), &createInfo, nullptr, &module.VKmodule) != VK_SUCCESS)
     {
-        throw std::runtime_error("failed to create shader module!");
+        throw std::runtime_error("Failed to create shader module!");
     }
 
     return module;
 }
 
-shaderType shader_system::getShaderType(const std::string& path)
+shaderModule shader_system::loadShader(const std::string& path)
+{
+    shaderModule module;
+
+    // Check file extension
+    if(path.find(".spv") == std::string::npos)
+    {
+        throw std::runtime_error("Non-standard extension for file: " + path);
+    }
+
+    // Load the shader from the .spv file
+    std::vector<char> SPVcode = readSPIRVFile(path);
+
+    // Calculate the number of uint32_t elements needed to hold the data
+    size_t numUint32Elements = SPVcode.size() / sizeof(uint32_t);
+    
+    // Create a vector to hold the converted data
+    module.code.resize(numUint32Elements);
+
+    // Copy the data from the char vector, interpreting it as uint32_t
+    std::memcpy(module.code.data(), SPVcode.data(), SPVcode.size());
+
+    // Create the vulkan shader module
+    VkShaderModuleCreateInfo createInfo{};
+    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    createInfo.codeSize = module.code.size() * sizeof(uint32_t);
+    createInfo.pCode = module.code.data();
+
+    if(vkCreateShaderModule(_core->getLogicalDevice(), &createInfo, nullptr, &module.VKmodule) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to create shader module!");
+    }
+
+    return module;
+}
+
+const shaderProgram& shader_system::getShaderProgram(const std::string& name) const
+{
+    auto it = _shaderPrograms.find(name);
+    if(it == _shaderPrograms.end())
+    {
+        throw std::runtime_error("Shader program not found: " + name);
+    }
+
+    return it->second;
+}
+
+std::string shader_system::readGLSLFile(const std::string& filename) const
+{
+    std::ifstream file(filename, std::ios::ate | std::ios::binary);
+
+    if(!file.is_open())
+    {
+        throw std::runtime_error("Failed to open file: " + filename);
+    }
+
+    size_t fileSize = (size_t) file.tellg();
+    std::string buffer(fileSize, ' ');
+    
+    file.seekg(0);
+    file.read(buffer.data(), fileSize);
+
+    file.close();
+
+    return buffer;
+}
+
+std::vector<char> shader_system::readSPIRVFile(const std::string& filename) const
+{
+        std::ifstream file;
+
+    std::string fullpath = filename;
+
+    file.open(fullpath, std::ios::ate | std::ios::binary);
+
+    if(!file.is_open())
+    {
+        throw std::runtime_error("failed to open file!");
+    }
+
+    size_t fileSize = (size_t) file.tellg();
+    std::vector<char> buffer(fileSize);
+
+    file.seekg(0);
+    file.read(buffer.data(), fileSize);
+
+    file.close();
+    return buffer;
+}
+
+
+bool shader_system::deleteOldShaderFile(const std::string& path)
+{
+    std::filesystem::path sourcePath(path);
+    std::filesystem::path spvPath(sourcePath.stem().string() + ".spv");
+
+    if(std::filesystem::exists(spvPath))
+    {
+        std::filesystem::remove(spvPath);
+        return true;
+    }
+    return false;
+}
+
+bool shader_system::isCompileNecessary(const std::string& path)
+{
+    std::filesystem::path sourcePath(path);
+    std::filesystem::path spvPath(sourcePath.stem().string() + ".spv");
+
+    if(!std::filesystem::exists(spvPath))
+    {
+        return true;
+    }
+
+    if(std::filesystem::last_write_time(spvPath) < std::filesystem::last_write_time(sourcePath))
+    {
+        return true;
+    }
+
+    return false;
+}
+
+
+shaderType shader_system::getShaderType(const std::string& path) const
 {
     if(path.find(".vert") != std::string::npos)
     {
