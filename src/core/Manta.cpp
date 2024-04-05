@@ -5,13 +5,15 @@
 #include "rendering/rendering.hpp"
 #include "user_input/user_input.hpp"
 
-Manta::Manta()
+Manta::Manta() 
 {
     init();
 }
 
 void Manta::run()
 {
+    m_rendering->firstTimeSetup();
+
     while (!glfwWindowShouldClose(m_rendering->getWindow())) {
         glfwPollEvents();
         m_user_input->executeCurrentInputs();
@@ -23,7 +25,7 @@ void Manta::run()
 
 void Manta::init()
 {
-    m_scene = std::make_shared<Scene>();
+    m_scene = std::make_shared<Scene>(this, _registry);
     initializeSettingsData(m_scene->getRegistry());
     
     m_rendering = std::make_shared<rendering_system>(m_scene);
@@ -33,6 +35,13 @@ void Manta::init()
     entt::entity camera = m_scene->addCamera();	
     m_scene->setActiveCamera(camera);
     m_rendering->setScene(m_scene);
+
+    m_rendering->initRender();
+}
+
+entt::registry& Manta::getRegistry()
+{
+    return _registry;
 }
 
 std::weak_ptr<settingsData> Manta::getSettings() const

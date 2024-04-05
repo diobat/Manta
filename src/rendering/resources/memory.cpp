@@ -46,7 +46,6 @@ memoryBuffer memory_system::createBuffer(VkDeviceSize size, VkBufferUsageFlags u
     return buffer;
 }
 
-
     // There are two types of memory at play here: device local memory and host visible memory.
     // Host visible memory is memory that is accessible by the CPU. We will first create a buffer in host visible memory and then copy the data to a buffer in device local memory.
     // Device local memory is memory that is local to the GPU and is the fastest memory to access. We want the vertex buffer to be in device local memory. Device local memory is not accesible by the CPU.
@@ -65,7 +64,7 @@ memoryBuffer memory_system::createVertexBuffer(std::vector<Vertex> vertices)
 
     copyBuffer(stagingBuffer.buffer, vertexBuffer.buffer, bufferSize);
 
-    deleteBuffer(stagingBuffer.buffer, stagingBuffer.memory);
+    freeBuffer(stagingBuffer.buffer, stagingBuffer.memory);
 
     return vertexBuffer;
 }
@@ -85,7 +84,7 @@ memoryBuffer memory_system::createIndexBuffer(std::vector<uint32_t> indices)
 
     copyBuffer(stagingBuffer.buffer, indexBuffer.buffer, bufferSize);
 
-    deleteBuffer(stagingBuffer.buffer, stagingBuffer.memory);
+    freeBuffer(stagingBuffer.buffer, stagingBuffer.memory);
 
     return indexBuffer;
 }
@@ -105,15 +104,23 @@ uint32_t memory_system::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlag
     throw std::runtime_error("Failed to find suitable memory type");   
 }
 
-void memory_system::deleteBuffer(VkBuffer buffer, VkDeviceMemory memory)
+void memory_system::freeBuffer(VkBuffer buffer, VkDeviceMemory memory)
 {
     vkDestroyBuffer(_core->getLogicalDevice(), buffer, nullptr);
     vkFreeMemory(_core->getLogicalDevice(), memory, nullptr);
 }
 
-void memory_system::deleteBuffer(memoryBuffer buffer)
+void memory_system::freeBuffer(memoryBuffer buffer)
 {
-    deleteBuffer(buffer.buffer, buffer.memory);
+    freeBuffer(buffer.buffer, buffer.memory);
+}
+
+void memory_system::freeBuffer(memoryBuffers buffers)
+{
+    for(auto& buffer : buffers.buffers)
+    {
+        freeBuffer(buffer);
+    }
 }
 
 

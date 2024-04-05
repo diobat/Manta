@@ -1,5 +1,6 @@
 #pragma once
 
+#include <entt/entt.hpp>
 #include <memory>
 
 class Scene;
@@ -16,12 +17,15 @@ public:
 
     void run();
 
+    entt::registry& getRegistry();
+
     std::weak_ptr<settingsData> getSettings() const;
     std::weak_ptr<Scene> getScene() const;
     std::weak_ptr<user_input_system> getUserInput() const;
     std::weak_ptr<rendering_system> getRendering() const;
 
 private:
+    entt::registry _registry;                          // ECS registry
 
     std::shared_ptr<settingsData> _settings;            // Settings
     std::shared_ptr<Scene> m_scene;                     // ECS scene

@@ -1,44 +1,68 @@
 #include "ECS/ECS.hpp"
 
+#include "core/Manta.hpp"
+
+#include "rendering/rendering.hpp"
+#include "rendering/resources/memory.hpp"
 #include "ECS/components/spatial.hpp"
 #include "ECS/components/camera.hpp"
+#include "core/settings.hpp"
+
+Scene::Scene(Manta* core, entt::registry& registry) : 
+    _core(core),
+    _registry(registry)
+{
+    ;
+}
 
 entt::registry& Scene::getRegistry()
 {
-    return m_registry;
+    return _registry;
 }
 
 
 entt::entity Scene::addCamera()
 {
-    return createCamera(m_registry);
+    entt::entity camera = createCamera(_registry);
+    
+    // Get number of frames in flight
+    size_t framesInFlight = getSettingsData(_registry).framesInFlight;
+
+    // Create uniform buffers for MVPMatrix
+    memoryBuffers memory;
+    memory.buffers = _core->getRendering().lock()->getMemorySystem().createUniformBuffers<MVPMatrix>(framesInFlight);
+
+    // Add buffers to camera
+    _registry.emplace<memoryBuffers>(camera).buffers = memory.buffers;
+
+    return camera;
 }
 
 
 void Scene::setActiveCamera(const entt::entity& camera)
 {
-    auto view = m_registry.view<TAG_camera>();
+    auto view = _registry.view<TAG_camera>();
 
     for(auto entity : view)
     {
         if(entity == camera)
         {
-            m_registry.emplace_or_replace<TAG_camera>(entity, true);
+            _registry.emplace_or_replace<TAG_camera>(entity, true);
         }
         else
         {
-            m_registry.emplace_or_replace<TAG_camera>(entity, false);
+            _registry.emplace_or_replace<TAG_camera>(entity, false);
         }
     }
 }
 
 entt::entity Scene::getActiveCamera() const
 {
-    auto view = m_registry.view<TAG_camera>();
+    auto view = _registry.view<TAG_camera>();
 
     for(auto entity : view)
     {
-        if(m_registry.get<TAG_camera>(entity).isActiveCamera)
+        if(_registry.get<TAG_camera>(entity).isActiveCamera)
         {
             return entity;
         }
@@ -49,5 +73,5 @@ entt::entity Scene::getActiveCamera() const
 void Scene::moveActiveCamera(unsigned int direction)
 {
     auto camera = getActiveCamera();
-    moveCamera(m_registry, camera, static_cast<relativeDirections>(direction));
+    moveCamera(_registry, camera, static_cast<relativeDirections>(direction));
 }

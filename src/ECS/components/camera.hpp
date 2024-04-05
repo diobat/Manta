@@ -1,7 +1,11 @@
 #pragma once
 
+// GLFW
+#include "wrapper/glfw.hpp"
+
 #include <entt/entt.hpp>
 #include "ECS/components/spatial.hpp"
+#include "rendering/resources/memory.hpp"
 
 struct TAG_camera
 {
@@ -10,11 +14,11 @@ struct TAG_camera
 
 struct MVPMatrix
 {
-    glm::mat4 model;
-    glm::mat4 view;
-    glm::mat4 projection;
+    alignas(16) glm::mat4 model;
+    alignas(16) glm::mat4 view;
+    alignas(16) glm::mat4 projection;
     
-    glm::mat4 value;
+    // glm::mat4 value;
 };
 
 struct cameraSettings

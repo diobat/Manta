@@ -30,10 +30,7 @@ shader_system::shader_system(rendering_system* core)  :
 
 void shader_system::scanFolderRecursive(const std::string& path)
 {
-
-    std::string shaderProgramName;
-    // the name of the folder at this location is the name of the shader program
-    shaderProgramName = std::filesystem::path(path).stem().string();
+    std::string shaderProgramName = getShaderName(path);
 
     std::vector<std::string> shaderFilenames;
     std::set<std::string> unusedExtensions = shaderExtensions;
@@ -95,7 +92,8 @@ void shader_system::scanFolderRecursive(const std::string& path)
         // Put it into the program struct
         program.shaders[static_cast<int>(module.type)] = module;
     }
-    _shaderPrograms[shaderProgramName] = program;\
+
+    _shaderPrograms[shaderProgramName] = program;
 }
 
 shaderModule shader_system::compileShader(const std::string& path)
@@ -141,16 +139,16 @@ shaderModule shader_system::compileShader(const std::string& path)
     const char* shaderCodeCStr = shaderCode.data();
 
     shader.setStrings(&shaderCodeCStr, 1);
-    shader.setEnvInput(glslang::EShSourceGlsl, stage, glslang::EShClient::EShClientOpenGL, glslang::EShTargetClientVersion::EShTargetOpenGL_450);
+    shader.setEnvInput(glslang::EShSourceGlsl, stage, glslang::EShClient::EShClientVulkan, glslang::EShTargetClientVersion::EShTargetVulkan_1_3);
     shader.setEnvClient(glslang::EShClient::EShClientVulkan, glslang::EShTargetClientVersion::EShTargetVulkan_1_3);
-    shader.setEnvTarget(glslang::EShTargetLanguage::EShTargetSpv, glslang::EShTargetLanguageVersion::EShTargetSpv_1_3);
+    shader.setEnvTarget(glslang::EShTargetLanguage::EShTargetSpv, glslang::EShTargetLanguageVersion::EShTargetSpv_1_4);
 
     auto includer = glslang::TShader::ForbidIncluder{};
 
     TBuiltInResource resources;
     // Compile the shader
     if(!shader.parse(   GetDefaultResources(),
-                        glslang::EShTargetClientVersion::EShTargetOpenGL_450, 
+                        glslang::EShTargetClientVersion::EShTargetVulkan_1_3, 
                         false, 
                         EShMsgDefault,
                         includer                        
@@ -261,6 +259,11 @@ const shaderProgram& shader_system::getShaderProgram(const std::string& name) co
     return it->second;
 }
 
+const std::unordered_map<std::string, shaderProgram>& shader_system::getShaderPrograms() const
+{
+    return _shaderPrograms;
+}
+
 std::string shader_system::readGLSLFile(const std::string& filename) const
 {
     std::ifstream file(filename, std::ios::ate | std::ios::binary);
@@ -362,5 +365,44 @@ shaderType shader_system::getShaderType(const std::string& path) const
     else
     {
         throw std::runtime_error("Non-standard extension / unknown shader type for file: " + path);
+    }
+}
+
+std::string shader_system::getShaderName(const std::string& path) const
+{
+
+    // check if last character is a '/', if so, remove it
+    // This is because filesystem::path.stem() does not work if the path ends with a '/'
+    if(path.back() == '/')
+    {
+        return getShaderName(path.substr(0, path.size() - 1));
+    }
+
+    std::filesystem::path p(path);
+    return p.stem().string();
+}
+
+VkShaderStageFlagBits shader_system::getVkShaderStageFlagBits(shaderType type) const
+{
+    switch (type)
+    {
+    case shaderType::VERTEX:
+        return VK_SHADER_STAGE_VERTEX_BIT;
+        break;
+    case shaderType::FRAGMENT:
+        return VK_SHADER_STAGE_FRAGMENT_BIT;
+        break;
+    case shaderType::GEOMETRY:
+        return VK_SHADER_STAGE_GEOMETRY_BIT;
+        break;
+    case shaderType::TESSELATION_CONTROL:
+        return VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+        break;
+    case shaderType::TESSELATION_EVALUATION:
+        return VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+        break;
+    default:
+        return VK_SHADER_STAGE_ALL;
+        break;
     }
 }

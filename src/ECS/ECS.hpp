@@ -2,9 +2,13 @@
 
 #include <entt/entt.hpp>
 
+class Manta;
+
 class Scene
 {
 public:
+    Scene::Scene(Manta* _core, entt::registry& registry);
+
     entt::registry& getRegistry();
 
     entt::entity addCamera();
@@ -14,5 +18,7 @@ public:
     void moveActiveCamera(unsigned int direction);
 
 private:
-    entt::registry m_registry;
+
+    Manta* _core;
+    entt::registry& _registry;
 };

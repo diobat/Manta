@@ -12,6 +12,10 @@
 #include "rendering/resources/memory.hpp"
 #include "rendering/resources/texture.hpp"
 #include "rendering/shaderManager.hpp"
+#include "rendering/pipelineManager.hpp"
+
+#include "rendering/descriptors/layoutCache.hpp"
+#include "rendering/descriptors/descriptorAllocator.hpp"
 
 
 #ifdef NDEBUG
@@ -36,6 +40,9 @@ class rendering_system {
 public:
     rendering_system(std::shared_ptr<Scene> scene);
 
+    // Initialize the renderer
+    void initRender();
+
     // Draw a frame
     void drawFrame();
 
@@ -47,12 +54,19 @@ public:
     // Setters
     void setScene(std::shared_ptr<Scene> scene);
     // Getters
+    entt::registry& getRegistry();                                                  // registry getter
     GLFWwindow* getWindow() { return _window; }                                     // window getter
     VkDevice getLogicalDevice() { return _device; }                                 // logical device getter
     VkPhysicalDevice getPhysicalDevice() { return _physicalDevice; }                // physical device getter
     memory_system& getMemorySystem() { return _memory; }                            // memory system getter 
     command_buffer_system& getCommandBufferSystem() { return _commandBuffer; }      // command buffer system getter
     texture_system& getTextureSystem() { return _texture; }                         // texture system getter
+    shader_system& getShaderSystem() { return _shaders; }                           // shader system getter
+
+    void firstTimeSetup();
+    bool firstTime = true;
+
+    VkRenderPass getRenderPass() { return _renderPass; }
 
 private:
     // Initialization
@@ -122,16 +136,19 @@ private:
         std::cerr << "Validation layer: " << pCallbackData->pMessage << std::endl;
         return VK_FALSE;
     };
-
-
+     
+    Manta* _core;                                           // core
     std::shared_ptr<Scene> _scene;                          // scene
-
+    
     memory_system _memory;                                  // memory system
     command_buffer_system _commandBuffer;                   // command buffer system
     texture_system _texture;                                // texture system
     shader_system _shaders;                                 // shader system
+    pipeline_system _pipelines;                             // pipeline system
 
-    
+    std::unique_ptr<DescriptorLayoutCache> _descriptorLayoutCache;
+    std::unique_ptr<DescriptorAllocator> _descriptorAllocator;
+
     GLFWwindow* _window;                                    // glfw window
     VkInstance _instance;                                   // vulkan instance
     VkDebugUtilsMessengerEXT _debugMessenger;               // debug messenger
@@ -165,10 +182,10 @@ private:
     std::vector<Vertex> _vertices;                          // vertices
     std::vector<uint32_t> _indices;                         // indices
 
-    memoryBuffer _vertexBuffer;                             // vertex buffer
-    memoryBuffer _indexBuffer;                              // index buffer
+    memoryBuffer _vertexBuffer;                             // vertex buffer    // model info
+    memoryBuffer _indexBuffer;                              // index buffer     // model info
 
-    std::vector<memoryBuffer> _uniformBuffers;              // uniform buffers
+    //std::vector<memoryBuffer> _uniformBuffers;              // uniform buffers  // These should be moved to the memory system and owned by the respective entities
 
     VkDescriptorPool _descriptorPool;                       // descriptor pool
     std::vector<VkDescriptorSet> _descriptorSets;           // descriptor sets

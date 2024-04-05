@@ -22,7 +22,7 @@ entt::entity createCamera(entt::registry& registry, const glm::vec3& positionVal
     glm::mat4 view = glm::mat4(1.0f);
     glm::mat4 proj = glm::perspective(fov, width / height, nearPlane, farPlane);
 
-    registry.emplace<MVPMatrix>(entity, model, view, proj, proj * view);
+    registry.emplace<MVPMatrix>(entity, model, view, proj);//, proj * view);
 
     registry.emplace<cameraSettings>(entity, fov, width, height, nearPlane, farPlane, translationSpeed, rotationSpeed);
 
@@ -45,7 +45,7 @@ const MVPMatrix& recalculateMVP(entt::registry& registry, entt::entity camera)
     };
 
     mvp.view = glm::lookAt(pos, pos + dir, glm::vec3(0.0f, 1.0f, 0.0f));
-    mvp.value = mvp.projection * mvp.view;
+    // mvp.value = mvp.projection * mvp.view;
 
     return mvp;
 }

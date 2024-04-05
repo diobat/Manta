@@ -23,7 +23,6 @@ enum class shaderType
     TESSELATION_CONTROL,
     TESSELATION_EVALUATION
 };
-
 struct shaderModule
 {
     std::string name;
@@ -35,6 +34,7 @@ struct shaderModule
 
 struct shaderProgram
 {
+    std::string name;
     std::array<shaderModule, 5> shaders;
 };
 
@@ -51,8 +51,11 @@ public:
     shaderModule loadShader(const std::string& shaderFilename);
 
     const shaderProgram& getShaderProgram(const std::string& name) const;
+    const std::unordered_map<std::string, shaderProgram>& getShaderPrograms() const;
 
+    VkShaderStageFlagBits getVkShaderStageFlagBits(shaderType type) const;
 private:
+
     std::string readGLSLFile(const std::string& filename) const;
     std::vector<char> readSPIRVFile(const std::string& filename) const ;
 
@@ -60,6 +63,7 @@ private:
     bool isCompileNecessary(const std::string& path);
 
     shaderType getShaderType(const std::string& path) const;
+    std::string getShaderName(const std::string& path) const;
 
     std::unordered_map<std::string, shaderProgram> _shaderPrograms;
 
