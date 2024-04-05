@@ -717,6 +717,11 @@ void rendering_system::createLogicalDevice()
     VkPhysicalDeviceFeatures deviceFeatures{};
     deviceFeatures.samplerAnisotropy = VK_TRUE;
 
+    VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures{};
+    descriptorIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+    descriptorIndexingFeatures.runtimeDescriptorArray = VK_TRUE;
+
+
     VkDeviceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 
@@ -733,6 +738,8 @@ void rendering_system::createLogicalDevice()
     } else {
         createInfo.enabledLayerCount = 0;
     }
+    createInfo.pNext = &descriptorIndexingFeatures;
+
 
     if(vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_device) != VK_SUCCESS){
         throw std::runtime_error("failed to create logical device!");
