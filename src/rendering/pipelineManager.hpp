@@ -40,6 +40,8 @@ public:
     shaderPipeline& getPipeline(std::string name);
 
 private:
+    // Generate the pipeline layout from reflection on the SPIR-V code
+    VkPipelineLayout generatePipelineLayout(const shaderProgram& program);
 
     // Creates the shader stages info for the pipeline (how many shaders, which shaders, etc.)
     std::vector<VkPipelineShaderStageCreateInfo> createShaderStagesInfo(const shaderProgram& program);

@@ -27,7 +27,7 @@ struct shaderModule
 {
     std::string name;
     shaderType type;
-    VkShaderModule VKmodule;
+    VkShaderModule VKmodule = VK_NULL_HANDLE;
     std::vector<uint32_t> code;
 };
 

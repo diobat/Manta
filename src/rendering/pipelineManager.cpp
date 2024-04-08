@@ -1,9 +1,11 @@
 #include "rendering/pipelineManager.hpp"
 
+
 #include "rendering/rendering.hpp"
 #include "rendering/shaderManager.hpp"
 #include "rendering/resources/vertex.hpp"
 
+#include "spirv_cross.hpp"
 
 #include <iostream>
 
@@ -74,12 +76,68 @@ shaderPipeline& pipeline_system::getPipeline(std::string name)
     return _pipelines[name];
 }
 
+namespace
+{
+    // Struct to hold information about a shader resource
+    struct ShaderResource {
+        uint32_t set;
+        uint32_t binding;
+        spirv_cross::SPIRType::BaseType type;
+        // Add more information as needed
+    };
+}
+
+
+VkPipelineLayout pipeline_system::generatePipelineLayout(const shaderProgram& program)
+{
+    // Get max number of descriptor sets from the physical device
+    VkPhysicalDeviceProperties properties;
+    vkGetPhysicalDeviceProperties(_core->getPhysicalDevice(), &properties);
+    uint32_t maxSets = properties.limits.maxBoundDescriptorSets;
+
+    // Create a vector of descriptor set layouts for each set
+    std::vector<std::vector<VkDescriptorSetLayoutBinding>> descriptorSetLayouts;
+    descriptorSetLayouts.resize(maxSets);
+
+    // Iterate over all shaders in the program (vertex, fragment, etc.)
+    for (auto& shader : program.shaders)
+    {
+        if(shader.VKmodule == VK_NULL_HANDLE)
+        {
+            continue;
+        }
+
+        // Load the SPIR-V code for this shader
+        std::vector<uint32_t> spirv = shader.code;
+        spirv_cross::Compiler comp(std::move(spirv)); 
+
+        spirv_cross::ShaderResources resources = comp.get_shader_resources();
+
+        // Uniform buffers
+        for (auto& resource : resources.uniform_buffers) 
+        {
+            VkDescriptorSetLayoutBinding layoutBinding = {};
+            layoutBinding.binding = comp.get_decoration(resource.id, spv::DecorationBinding);
+            layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+
+        }
+
+        // Sampled images
+        for (auto& resource : resources.sampled_images) 
+        {
+
+        }
+
+
+    }
+    
+}
+
 std::vector<VkPipelineShaderStageCreateInfo> pipeline_system::createShaderStagesInfo(const shaderProgram& program)
 {
     shader_system& shaderManager = _core->getShaderSystem();
 
     _shaderStages.clear();
-
     for (auto& shader : program.shaders)
     {
         if (shader.name.empty())

@@ -138,14 +138,13 @@ void rendering_system::initVulkan()
     pickPhysicalDevice();
     createLogicalDevice();
 
-    // Shader inisialization
+    // Shader initialization
     std::string shaderFolder = "res/shaders/";
     _shaders.scanFolderRecursive(ROOT_DIR + shaderFolder);
 
     // Descriptor initialization
     _descriptorLayoutCache = std::make_unique<DescriptorLayoutCache>(_device);
     _descriptorAllocator = std::make_unique<DescriptorAllocator>(_device);
-
 
 }
 

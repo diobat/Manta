@@ -114,24 +114,22 @@ FetchContent_Declare(
     GIT_TAG main  # Adjust the tag or commit hash as needed
 )
 set(GLSLANG_BUILD_TESTS OFF)
-# set(GLSLANG_BUILD_EXTERNAL OFF)
-# set(GLSLANG_BUILD_ESSL OFF)
-# set(GLSLANG_BUILD_HLSL OFF)
-# set(GLSLANG_BUILD_SPVREMAPPER OFF)
 set(GLSLANG_BUILD_SPVTOOLS ON)
-# set(GLSLANG_BUILD_AMD_EXTENSIONS OFF)
-# set(GLSLANG_BUILD_GLSLANG OFF)
-# set(GLSLANG_BUILD_OGLCOMPILER OFF)
 set(GLSLANG_BUILD_VULKAN ON)
-# set(GLSLANG_BUILD_PCH_SUPPORT OFF)
 set(GLSLANG_BUILD_SHARED OFF)
 set(GLSLANG_BUILD_STATIC ON)
-# set(GLSLANG_INSTALL OFF)
 set(GLSLANG_VALIDATION_LAYER ON)
 FetchContent_MakeAvailable(glslang)
-
 target_link_libraries(${PROJECT_NAME} PUBLIC glslang SPIRV glslang-default-resource-limits)
 
+######################################## SPIRV-Cross
+FetchContent_Declare(
+    spirv_cross
+    GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Cross.git
+    GIT_TAG vulkan-sdk-1.3.280
+)
+FetchContent_MakeAvailable(spirv_cross)
+target_link_libraries(${PROJECT_NAME} PUBLIC spirv-cross-core spirv-cross-glsl spirv-cross-hlsl spirv-cross-msl spirv-cross-reflect spirv-cross-util)
 
 ######################################## Vulkan
 find_package(Vulkan REQUIRED)
