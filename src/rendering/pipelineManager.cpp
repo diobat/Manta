@@ -20,7 +20,7 @@ void pipeline_system::init(std::unique_ptr<DescriptorLayoutCache>& _descriptorLa
     
 }
 
-void pipeline_system::createPipeline(std::string shaderProgramName, VkDescriptorSetLayout descriptorSetLayout)
+void pipeline_system::createPipeline(std::string shaderProgramName)
 {
 
     shader_system& shaderManager = _core->getShaderSystem();
@@ -40,7 +40,7 @@ void pipeline_system::createPipeline(std::string shaderProgramName, VkDescriptor
     pipelineInfo.pDepthStencilState = &createDepthStencilInfo(); // Optional
     pipelineInfo.pColorBlendState = &createColorBlendingInfo();
     pipelineInfo.pDynamicState = &createDynamicStateInfo(); // Optional
-    pipelineInfo.layout = createPipelineLayout(descriptorSetLayout);
+    pipelineInfo.layout = generatePipelineLayout(shaderProgram);
     pipelineInfo.renderPass = _core->getRenderPass();
     pipelineInfo.subpass = 0;
 
@@ -96,8 +96,10 @@ VkPipelineLayout pipeline_system::generatePipelineLayout(const shaderProgram& pr
     uint32_t maxSets = properties.limits.maxBoundDescriptorSets;
 
     // Create a vector of descriptor set layouts for each set
-    std::vector<std::vector<VkDescriptorSetLayoutBinding>> descriptorSetLayouts;
-    descriptorSetLayouts.resize(maxSets);
+    std::vector<std::vector<VkDescriptorSetLayoutBinding>> descriptorSetLayoutBindings;
+    descriptorSetLayoutBindings.resize(maxSets);
+
+    std::set<uint32_t> descriptorSetsUsed;
 
     // Iterate over all shaders in the program (vertex, fragment, etc.)
     for (auto& shader : program.shaders)
@@ -116,20 +118,50 @@ VkPipelineLayout pipeline_system::generatePipelineLayout(const shaderProgram& pr
         // Uniform buffers
         for (auto& resource : resources.uniform_buffers) 
         {
-            VkDescriptorSetLayoutBinding layoutBinding = {};
+            uint32_t set = comp.get_decoration(resource.id, spv::DecorationDescriptorSet);
+            VkDescriptorSetLayoutBinding layoutBinding{};
             layoutBinding.binding = comp.get_decoration(resource.id, spv::DecorationBinding);
             layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            layoutBinding.descriptorCount = 1;
+            layoutBinding.stageFlags = _core->getShaderSystem().getVkShaderStageFlagBits(shader.type);
 
+            descriptorSetsUsed.insert(set);
+            descriptorSetLayoutBindings[set].push_back(layoutBinding);
         }
 
         // Sampled images
         for (auto& resource : resources.sampled_images) 
         {
+            uint32_t set = comp.get_decoration(resource.id, spv::DecorationDescriptorSet);
+            VkDescriptorSetLayoutBinding layoutBinding{};
+            layoutBinding.binding = comp.get_decoration(resource.id, spv::DecorationBinding);
+            layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            layoutBinding.descriptorCount = 1;
+            layoutBinding.stageFlags = _core->getShaderSystem().getVkShaderStageFlagBits(shader.type);
 
+            descriptorSetsUsed.insert(set);
+            descriptorSetLayoutBindings[set].push_back(layoutBinding);
         }
 
+    }
+
+    std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
+    descriptorSetLayouts.resize(descriptorSetsUsed.size());
+
+    for(auto& set : descriptorSetsUsed)
+    {
+        VkDescriptorSetLayoutCreateInfo layoutInfo{};
+        layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        layoutInfo.bindingCount = static_cast<uint32_t>(descriptorSetLayoutBindings[set].size());
+        layoutInfo.pBindings = descriptorSetLayoutBindings[set].data();
+        if(vkCreateDescriptorSetLayout(_core->getLogicalDevice(), &layoutInfo, nullptr, &descriptorSetLayouts[set]) != VK_SUCCESS)
+        {
+            std::cerr << "Failed to create descriptor set layout" << std::endl;
+        }
 
     }
+
+    return createPipelineLayout(descriptorSetLayouts);
     
 }
 
@@ -306,13 +338,13 @@ VkPipelineColorBlendStateCreateInfo pipeline_system::createColorBlendingInfo()
     return _colorBlending;
 }
 
-VkPipelineLayout pipeline_system::createPipelineLayout(VkDescriptorSetLayout descriptorSetLayout)
+VkPipelineLayout pipeline_system::createPipelineLayout(std::vector<VkDescriptorSetLayout> descriptorSetLayout)
 {
     
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+    pipelineLayoutInfo.setLayoutCount = descriptorSetLayout.size();
+    pipelineLayoutInfo.pSetLayouts = descriptorSetLayout.data();
     pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
     pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 

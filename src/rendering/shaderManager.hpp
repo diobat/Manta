@@ -54,6 +54,8 @@ public:
     const std::unordered_map<std::string, shaderProgram>& getShaderPrograms() const;
 
     VkShaderStageFlagBits getVkShaderStageFlagBits(shaderType type) const;
+
+    void cleanup();
 private:
 
     std::string readGLSLFile(const std::string& filename) const;

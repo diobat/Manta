@@ -264,6 +264,42 @@ const std::unordered_map<std::string, shaderProgram>& shader_system::getShaderPr
     return _shaderPrograms;
 }
 
+VkShaderStageFlagBits shader_system::getVkShaderStageFlagBits(shaderType type) const
+{
+    switch (type)
+    {
+    case shaderType::VERTEX:
+        return VK_SHADER_STAGE_VERTEX_BIT;
+        break;
+    case shaderType::FRAGMENT:
+        return VK_SHADER_STAGE_FRAGMENT_BIT;
+        break;
+    case shaderType::GEOMETRY:
+        return VK_SHADER_STAGE_GEOMETRY_BIT;
+        break;
+    case shaderType::TESSELATION_CONTROL:
+        return VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+        break;
+    case shaderType::TESSELATION_EVALUATION:
+        return VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+        break;
+    default:
+        return VK_SHADER_STAGE_ALL;
+        break;
+    }
+}
+
+void shader_system::cleanup()
+{
+    for(auto& [name, program] : _shaderPrograms)
+    {
+        for(auto& shader : program.shaders)
+        {
+            vkDestroyShaderModule(_core->getLogicalDevice(), shader.VKmodule, nullptr);
+        }
+    }
+}
+
 std::string shader_system::readGLSLFile(const std::string& filename) const
 {
     std::ifstream file(filename, std::ios::ate | std::ios::binary);
@@ -380,29 +416,4 @@ std::string shader_system::getShaderName(const std::string& path) const
 
     std::filesystem::path p(path);
     return p.stem().string();
-}
-
-VkShaderStageFlagBits shader_system::getVkShaderStageFlagBits(shaderType type) const
-{
-    switch (type)
-    {
-    case shaderType::VERTEX:
-        return VK_SHADER_STAGE_VERTEX_BIT;
-        break;
-    case shaderType::FRAGMENT:
-        return VK_SHADER_STAGE_FRAGMENT_BIT;
-        break;
-    case shaderType::GEOMETRY:
-        return VK_SHADER_STAGE_GEOMETRY_BIT;
-        break;
-    case shaderType::TESSELATION_CONTROL:
-        return VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-        break;
-    case shaderType::TESSELATION_EVALUATION:
-        return VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
-        break;
-    default:
-        return VK_SHADER_STAGE_ALL;
-        break;
-    }
 }

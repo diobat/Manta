@@ -164,9 +164,10 @@ void rendering_system::initRender()
 void rendering_system::firstTimeSetup()
 {
     // Resource initialization
-    _textureImage =  _texture.createTextureFromImageFile(TEXTURE_PATH);
-    _texture.createTextureImageView(_textureImage);
     createTextureSampler();
+    _textureImage =  _texture.createTextureFromImageFile(TEXTURE_PATH);
+    // _texture.createTextureImageView(_textureImage);
+
     loadModel();
     _vertexBuffer = _memory.createVertexBuffer(_vertices); 
     _indexBuffer = _memory.createIndexBuffer(_indices);
@@ -253,6 +254,9 @@ void rendering_system::createTextureSampler()
 
 void rendering_system::createDescriptorSets()
 {
+    // This function has to be replaced with the new descriptor system
+
+
     unsigned int framesinFlight = getSettingsData(_scene->getRegistry()).framesInFlight;
 
     std::vector<VkDescriptorSetLayout> layouts(framesinFlight, _descriptorSetLayout);
@@ -271,6 +275,16 @@ void rendering_system::createDescriptorSets()
 
     for(size_t i = 0; i < framesinFlight; i++)
     {
+
+        // Quando este codigo substitui o de baixo o renderer deixa de funcionar
+        // amanha começas por descobrir porquê
+
+	    // DescriptorBuilder::begin(_descriptorLayoutCache.get(), _descriptorAllocator.get())
+		// .bindBuffer(0, &cameraBuffers.buffers[i].descriptorInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT)
+		// .bindImage(1, &_textureImage.descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+		// .build(_descriptorSets[i], _descriptorSetLayout);
+
+
         // VkDescriptorBufferInfo bufferInfo{} ;
         // bufferInfo.buffer = _uniformBuffers[i].buffer;
         // bufferInfo.offset = 0;
@@ -334,6 +348,7 @@ void rendering_system::createDescriptorSetLayout()
     uboLayoutBinding.descriptorCount = 1;
     uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     uboLayoutBinding.pImmutableSamplers = nullptr;
+    
 
     VkDescriptorSetLayoutBinding samplerLayoutBinding{};
     samplerLayoutBinding.binding = 1;
@@ -524,7 +539,7 @@ void rendering_system::createCommandPool()
 
 void rendering_system::createGraphicsPipeline() 
 {
-    _pipelines.createPipeline("basic", _descriptorSetLayout);
+    _pipelines.createPipeline("basic");
 }
 
 void rendering_system::createRenderPass()
@@ -988,8 +1003,8 @@ void rendering_system::cleanup()
     vkDestroyCommandPool(_device, _commandPool, nullptr);
     vkDestroyCommandPool(_device, _transferCommandPool, nullptr);
 
-    vkDestroyPipeline(_device, _graphicsPipeline, nullptr);
-    vkDestroyPipelineLayout(_device, _pipelineLayout, nullptr);
+    _pipelines.cleanup();
+    _shaders.cleanup();
     vkDestroyRenderPass(_device, _renderPass, nullptr);
 
     vkDestroyDevice(_device, nullptr);

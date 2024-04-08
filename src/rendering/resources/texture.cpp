@@ -61,6 +61,7 @@ image texture_system::createImage(uint32_t width, uint32_t height, uint32_t mipL
     // Bind the memory
     vkBindImageMemory(_core->getLogicalDevice(), img.image, img.memory, 0);
 
+
     return img;
 }
 
@@ -99,6 +100,14 @@ image texture_system::createTextureFromImageFile(const std::string& path)
     generateMipMaps(img.image, VK_FORMAT_R8G8B8A8_SRGB, loadedImage.width, loadedImage.height, img.mipLevels);
 
     _core->getMemorySystem().freeBuffer(stagingBuffer);
+
+    // Populate the image view
+    createTextureImageView(img, VK_FORMAT_R8G8B8A8_SRGB);
+
+    // Populate the descriptor image info
+    img.descriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    img.descriptor.imageView = img.imageView;
+    img.descriptor.sampler = _core->getTextureSampler();
 
     return img;
 }

@@ -67,7 +67,7 @@ public:
     bool firstTime = true;
 
     VkRenderPass getRenderPass() { return _renderPass; }
-
+    VkSampler getTextureSampler() { return _textureSampler; }
 private:
     // Initialization
     void init();
@@ -165,8 +165,6 @@ private:
     std::vector<VkImageView> _swapChainImageViews;          // swap chain image views
     VkRenderPass _renderPass;                               // render pass
     VkDescriptorSetLayout _descriptorSetLayout;             // descriptor set layout
-    VkPipelineLayout _pipelineLayout;                       // pipeline layout
-    VkPipeline _graphicsPipeline;                           // graphics pipeline
     std::vector<VkFramebuffer> _swapChainFramebuffers;      // swap chain framebuffers
     VkCommandPool _commandPool;                             // command pool
     VkCommandPool _transferCommandPool;                     // transfer command pool

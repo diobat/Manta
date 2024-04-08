@@ -33,7 +33,7 @@ public:
 
     void init(std::unique_ptr<DescriptorLayoutCache>& _descriptorLayoutCache, std::unique_ptr<DescriptorAllocator>& _descriptorAllocator);
 
-    void createPipeline(std::string shaderProgramName, VkDescriptorSetLayout descriptorSetLayouts);
+    void createPipeline(std::string shaderProgramName);
 
     void cleanup();
 
@@ -85,7 +85,7 @@ private:
     VkPipelineColorBlendAttachmentState _colorBlendAttachment;
 
     // Defines the layout of the descriptor sets that will be used in the pipeline
-    VkPipelineLayout createPipelineLayout(VkDescriptorSetLayout descriptorSetLayout);
+    VkPipelineLayout createPipelineLayout(std::vector<VkDescriptorSetLayout> descriptorSetLayout);
     VkPipelineLayout _pipelineLayout;
 
     // Defines the render pass that the pipeline will be used with

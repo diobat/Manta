@@ -15,6 +15,7 @@ struct image
     VkFormat format;
     VkImageLayout layout;
     uint32_t mipLevels;
+    VkDescriptorImageInfo descriptor;
 };
 
 class texture_system
