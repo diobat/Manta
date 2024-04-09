@@ -160,8 +160,11 @@ VkPipelineLayout pipeline_system::generatePipelineLayout(const shaderProgram& pr
         }
 
     }
+    VkPipelineLayout pipelineLayout = createPipelineLayout(descriptorSetLayouts);
 
-    return createPipelineLayout(descriptorSetLayouts);
+    vkDestroyDescriptorSetLayout(_core->getLogicalDevice(), descriptorSetLayouts[0], nullptr);
+
+    return pipelineLayout;
     
 }
 
