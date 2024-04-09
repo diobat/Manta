@@ -13,6 +13,7 @@
 #include "rendering/resources/texture.hpp"
 #include "rendering/shaderManager.hpp"
 #include "rendering/pipelineManager.hpp"
+#include "rendering/swapChainManager.hpp"
 
 #include "rendering/descriptors/layoutCache.hpp"
 #include "rendering/descriptors/descriptorAllocator.hpp"
@@ -88,7 +89,7 @@ private:
         void createSurface();
         void pickPhysicalDevice();
             bool isDeviceSuitable(VkPhysicalDevice device);
-                QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
+                // QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
                 bool checkDeviceExtensionSupport(VkPhysicalDevice device);
                 SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);\
         void createLogicalDevice();
@@ -141,13 +142,12 @@ private:
     texture_system _texture;                                // texture system
     shader_system _shaders;                                 // shader system
     pipeline_system _pipelines;                             // pipeline system
+    swap_chain_system _swapChains;                          // swap chain system
 
     std::unique_ptr<DescriptorLayoutCache> _descriptorLayoutCache;
     std::unique_ptr<DescriptorAllocator> _descriptorAllocator;
 
-
     // Runtime Variables
-
     std::vector<Vertex> _vertices;                          // vertices
     std::vector<uint32_t> _indices;                         // indices
 
@@ -163,19 +163,20 @@ private:
 
     VkSampler _textureSampler;                              // texture sampler
 
-    image _depthImage;                                         // depth image
-
-
+    image _depthImage;                                      // depth image
 
     // Initialization variables
     GLFWwindow* _window;                                    // glfw window
     VkInstance _instance;                                   // vulkan instance
     VkDebugUtilsMessengerEXT _debugMessenger;               // debug messenger
+
     VkPhysicalDevice _physicalDevice = VK_NULL_HANDLE;      // physical device
     VkDevice _device;                                       // logical device
+
     VkQueue _graphicsQueue;                                 // graphics queue
     VkQueue _transferQueue;                                 // transfer queue
     VkQueue _presentationQueue;                             // presentation queue
+
     VkSurfaceKHR _surface;                                  // surface
     VkSwapchainKHR _swapChain;                              // swap chain
     std::vector<VkImage> _swapChainImages;                  // swap chain images
@@ -184,6 +185,7 @@ private:
     std::vector<VkImageView> _swapChainImageViews;          // swap chain image views
     VkRenderPass _renderPass;                               // render pass
     std::vector<VkFramebuffer> _swapChainFramebuffers;      // swap chain framebuffers
+
     VkCommandPool _commandPool;                             // command pool
     VkCommandPool _transferCommandPool;                     // transfer command pool
     std::vector<VkCommandBuffer> _commandBuffers;           // command buffer

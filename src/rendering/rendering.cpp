@@ -17,12 +17,11 @@
 #include "core/settings.hpp"
 #include "ECS/components/camera.hpp"
 #include "ECS/components/model.hpp"
+#include "util/queueFamilies.hpp"
 
 #include "rendering/descriptors/descriptorBuilder.hpp"
 
-
 // Data
-
 const std::string MODEL_PATH = "res/models/room/viking_room.obj";
 const std::string TEXTURE_PATH = "X:/Repos/Manta/res/models/room/viking_room.png";
 
@@ -35,7 +34,6 @@ const std::vector<const char*> deviceExtensions = {
 };
 
 // Helper functions
-
 VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger){
     auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
     if (func != nullptr) {
@@ -52,54 +50,31 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
     }
 }
 
-static std::vector<char> readFile(const std::string& filename)
-{
-    std::ifstream file;
+// struct QueueFamilyIndices{
+//     std::optional<uint32_t> graphicsFamily;
+//     std::optional<uint32_t> transferFamily;
+//     std::optional<uint32_t> presentFamily;
 
-    std::string fullpath = ROOT_DIR + filename;
+//     bool isComplete(){
+//         return graphicsFamily.has_value() && presentFamily.has_value() && transferFamily.has_value();
+//     }
+// };
 
-    file.open(fullpath, std::ios::ate | std::ios::binary);
-
-    if(!file.is_open())
-    {
-        throw std::runtime_error("failed to open file!");
-    }
-
-    size_t fileSize = (size_t) file.tellg();
-    std::vector<char> buffer(fileSize);
-
-    file.seekg(0);
-    file.read(buffer.data(), fileSize);
-
-    file.close();
-    return buffer;
-}
-
-struct QueueFamilyIndices{
-    std::optional<uint32_t> graphicsFamily;
-    std::optional<uint32_t> transferFamily;
-    std::optional<uint32_t> presentFamily;
-
-    bool isComplete(){
-        return graphicsFamily.has_value() && presentFamily.has_value() && transferFamily.has_value();
-    }
-};
-
-struct SwapChainSupportDetails{
-    VkSurfaceCapabilitiesKHR capabilities;
-    std::vector<VkSurfaceFormatKHR> formats;
-    std::vector<VkPresentModeKHR> presentModes;
-};
+// struct SwapChainSupportDetails{
+//     VkSurfaceCapabilitiesKHR capabilities;
+//     std::vector<VkSurfaceFormatKHR> formats;
+//     std::vector<VkPresentModeKHR> presentModes;
+// };
 
 rendering_system::rendering_system(std::shared_ptr<Scene> scene)    :
     _scene(scene),
     _memory(this, scene->getRegistry(), _device),
-    _commandBuffer(_device, _commandPool , _graphicsQueue),
+    _commandBuffer(this, _commandPool , _graphicsQueue),
     _texture(this),
     _shaders(this), 
-    _pipelines(this)
+    _pipelines(this), 
+    _swapChains(this, _surface)
 {
-
     init();
 }
 
@@ -371,7 +346,7 @@ void rendering_system::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
     vkCmdBindIndexBuffer(commandBuffer, _indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelines.getPipeline("basic").layout, 0, 1, &_descriptorSets[_currentFrame], 0, nullptr);
-    
+
     vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(_indices.size()), 1, 0, 0, 0);
 
     vkCmdEndRenderPass(_commandBuffers[_currentFrame]);
@@ -402,7 +377,7 @@ void rendering_system::createCommandBuffers()
 
 void rendering_system::createCommandPool()
 {
-    QueueFamilyIndices queueFamilyIndices = findQueueFamilies(_physicalDevice);
+    QueueFamilyIndices queueFamilyIndices = findQueueFamilies(_physicalDevice, _surface);
 
     VkCommandPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -550,7 +525,7 @@ void rendering_system::createSwapChain()
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-    QueueFamilyIndices indices = findQueueFamilies(_physicalDevice);
+    QueueFamilyIndices indices = findQueueFamilies(_physicalDevice, _surface);
 
     // Piggyback on a std::set to make them unique
     std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(), indices.presentFamily.value(), indices.transferFamily.value()};
@@ -597,7 +572,7 @@ void rendering_system::createSurface()
 
 void rendering_system::createLogicalDevice()
 {
-    QueueFamilyIndices indices = findQueueFamilies(_physicalDevice);
+    QueueFamilyIndices indices = findQueueFamilies(_physicalDevice, _surface);
 
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
     std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(), indices.presentFamily.value()};
@@ -773,11 +748,11 @@ void rendering_system::drawFrame()
     vkResetFences(_device, 1, &_inFlightFences[_currentFrame]);
     vkResetCommandBuffer(_commandBuffers[_currentFrame], 0);
 
-    // Begin recording command buffer
-
-    recordCommandBuffer(_commandBuffers[_currentFrame], imageIndex);
-
+    // Update UB's with new data
     updateUniformBuffer(_currentFrame);
+
+    // Begin recording command buffer
+    recordCommandBuffer(_commandBuffers[_currentFrame], imageIndex);
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -823,8 +798,7 @@ void rendering_system::drawFrame()
         throw std::runtime_error("failed to present swap chain image!");
     }
 
-    unsigned int framesinFlight = getSettingsData(_scene->getRegistry()).framesInFlight;
-    _currentFrame = (_currentFrame + 1) % framesinFlight;
+    _currentFrame = (_currentFrame + 1) % getSettingsData(_scene->getRegistry()).framesInFlight;
 }
 
 void rendering_system::updateUniformBuffer(uint32_t currentImage)
@@ -908,7 +882,7 @@ void rendering_system::cleanup()
 
 bool rendering_system::isDeviceSuitable(VkPhysicalDevice device) 
 {
-    QueueFamilyIndices indices = findQueueFamilies(device);
+    QueueFamilyIndices indices = findQueueFamilies(device, _surface);
 
     bool extensionsSupported = checkDeviceExtensionSupport(device);
 
@@ -979,7 +953,7 @@ bool rendering_system::checkValidationLayerSupport()
     return true;
 }
 
-SwapChainSupportDetails rendering_system::querySwapChainSupport(VkPhysicalDevice device)
+SwapChainSupportDetails rendering_system::querySwapChainSupport(VkPhysicalDevice device)    
 {
     SwapChainSupportDetails details;
 
@@ -1054,44 +1028,44 @@ VkExtent2D rendering_system::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& ca
     }
 }
 
-QueueFamilyIndices rendering_system::findQueueFamilies(VkPhysicalDevice device) 
-{
-    QueueFamilyIndices indices;
+// QueueFamilyIndices rendering_system::findQueueFamilies(VkPhysicalDevice device) 
+// {
+//     QueueFamilyIndices indices;
 
-    uint32_t queueFamilyCount = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+//     uint32_t queueFamilyCount = 0;
+//     vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
 
-    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+//     std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+//     vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
 
-    int i = 0;
-    for(const auto& queueFamily : queueFamilies)
-    {
-        if(queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-        {
-            indices.graphicsFamily = i;
-        }
+//     int i = 0;
+//     for(const auto& queueFamily : queueFamilies)
+//     {
+//         if(queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+//         {
+//             indices.graphicsFamily = i;
+//         }
 
-        if(queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT && !(queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT))
-        {
-            indices.transferFamily = i;
-        }
+//         if(queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT && !(queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT))
+//         {
+//             indices.transferFamily = i;
+//         }
 
-        VkBool32 presentSupport = false;
-        vkGetPhysicalDeviceSurfaceSupportKHR(device, i, _surface, &presentSupport);
+//         VkBool32 presentSupport = false;
+//         vkGetPhysicalDeviceSurfaceSupportKHR(device, i, _surface, &presentSupport);
 
-        if (presentSupport)
-        {
-            indices.presentFamily = i;
-        }
+//         if (presentSupport)
+//         {
+//             indices.presentFamily = i;
+//         }
         
-        if(indices.isComplete())
-        {
-            break;
-        }
-    }
-    return indices;
-}
+//         if(indices.isComplete())
+//         {
+//             break;
+//         }
+//     }
+//     return indices;
+// }
 
 void rendering_system::setScene(std::shared_ptr<Scene> scene)
 {
@@ -1100,5 +1074,5 @@ void rendering_system::setScene(std::shared_ptr<Scene> scene)
 
 entt::registry& rendering_system::getRegistry()
 {
-    return _core->getRegistry();
+    return _scene->getRegistry();
 }

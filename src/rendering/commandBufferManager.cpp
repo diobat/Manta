@@ -1,11 +1,15 @@
 #include "rendering/commandBufferManager.hpp"
+#include "rendering/rendering.hpp"
 
-command_buffer_system::command_buffer_system(VkDevice& logicalDevice, VkCommandPool& commandPool, VkQueue& graphicsQueue) :
-    _logicalDevice(logicalDevice),
+#include "core/settings.hpp"
+
+command_buffer_system::command_buffer_system(rendering_system* core, VkCommandPool& commandPool, VkQueue& graphicsQueue) :
+    _core(core),
     _commandPool(commandPool),
-    _graphicsQueue(graphicsQueue)
+    _graphicsQueue(graphicsQueue), 
+    _framesInFlight(getSettingsData(core->getRegistry()).framesInFlight)
 {
-    ;
+    _commandBuffers.resize(3);
 }
 
 VkCommandBuffer command_buffer_system::beginSingleTimeCommands()
@@ -17,7 +21,7 @@ VkCommandBuffer command_buffer_system::beginSingleTimeCommands()
     allocInfo.commandBufferCount = 1;
 
     VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(_logicalDevice, &allocInfo, &commandBuffer);
+    vkAllocateCommandBuffers(_core->getLogicalDevice(), &allocInfo, &commandBuffer);
 
     VkCommandBufferBeginInfo beginInfo = {};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -40,5 +44,5 @@ void command_buffer_system::endSingleTimeCommands(VkCommandBuffer commandBuffer)
     vkQueueSubmit(_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
     vkQueueWaitIdle(_graphicsQueue);
 
-    vkFreeCommandBuffers(_logicalDevice, _commandPool, 1, &commandBuffer);
+    vkFreeCommandBuffers(_core->getLogicalDevice(), _commandPool, 1, &commandBuffer);
 }
