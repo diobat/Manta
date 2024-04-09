@@ -164,7 +164,6 @@ private:
     VkExtent2D _swapChainExtent;                            // swap chain extent
     std::vector<VkImageView> _swapChainImageViews;          // swap chain image views
     VkRenderPass _renderPass;                               // render pass
-    VkDescriptorSetLayout _descriptorSetLayout;             // descriptor set layout
     std::vector<VkFramebuffer> _swapChainFramebuffers;      // swap chain framebuffers
     VkCommandPool _commandPool;                             // command pool
     VkCommandPool _transferCommandPool;                     // transfer command pool
