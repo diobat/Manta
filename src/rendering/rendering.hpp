@@ -101,10 +101,7 @@ private:
         void createRenderPass();
             VkFormat findDepthFormat();
                 VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
-        void createDescriptorSetLayout();
         void createGraphicsPipeline();
-            VkShaderModule createShaderModule(const std::vector<char>& code);
-            VkShaderModule createShaderModule(const std::vector<uint32_t>& code); // Overload of the above function
         void createCommandPool();
         void createDepthResources();
         void createFramebuffers();
@@ -112,7 +109,6 @@ private:
         // Resource setup
         void createTextureSampler();
         void loadModel();
-        void createDescriptorPool();
         void createDescriptorSets();
         void createCommandBuffers();
         void createSyncObjects();
@@ -149,6 +145,29 @@ private:
     std::unique_ptr<DescriptorLayoutCache> _descriptorLayoutCache;
     std::unique_ptr<DescriptorAllocator> _descriptorAllocator;
 
+
+    // Runtime Variables
+
+    std::vector<Vertex> _vertices;                          // vertices
+    std::vector<uint32_t> _indices;                         // indices
+
+    memoryBuffer _vertexBuffer;                             // vertex buffer    // model info
+    memoryBuffer _indexBuffer;                              // index buffer     // model info
+
+    VkDescriptorPool _descriptorPool;                       // descriptor pool
+    std::vector<VkDescriptorSet> _descriptorSets;           // descriptor sets
+
+    uint32_t _mipLevels = 1;                                // mip levels
+
+    image _textureImage;                                    // texture image
+
+    VkSampler _textureSampler;                              // texture sampler
+
+    image _depthImage;                                         // depth image
+
+
+
+    // Initialization variables
     GLFWwindow* _window;                                    // glfw window
     VkInstance _instance;                                   // vulkan instance
     VkDebugUtilsMessengerEXT _debugMessenger;               // debug messenger
@@ -176,28 +195,4 @@ private:
 
     bool _framebufferResized = false;                       // framebuffer resized flag
 
-    std::vector<Vertex> _vertices;                          // vertices
-    std::vector<uint32_t> _indices;                         // indices
-
-    memoryBuffer _vertexBuffer;                             // vertex buffer    // model info
-    memoryBuffer _indexBuffer;                              // index buffer     // model info
-
-    //std::vector<memoryBuffer> _uniformBuffers;              // uniform buffers  // These should be moved to the memory system and owned by the respective entities
-
-    VkDescriptorPool _descriptorPool;                       // descriptor pool
-    std::vector<VkDescriptorSet> _descriptorSets;           // descriptor sets
-
-    uint32_t _mipLevels = 1;                                // mip levels
-
-    image _textureImage;                                    // texture image
-    // VkImage _textureImage;                                  // texture image
-    // VkDeviceMemory _textureImageMemory;                     // texture image memory
-    // VkImageView _textureImageView;                          // texture image view
-
-    VkSampler _textureSampler;                              // texture sampler
-
-    image _depthImage;                                         // depth image
-    // VkImage _depthImage;                                    // depth image
-    // VkDeviceMemory _depthImageMemory;                       // depth image memory
-    // VkImageView _depthImageView;                            // depth image view
 };

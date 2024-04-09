@@ -1103,40 +1103,6 @@ QueueFamilyIndices rendering_system::findQueueFamilies(VkPhysicalDevice device)
     return indices;
 }
 
-VkShaderModule rendering_system::createShaderModule(const std::vector<char>& code)
-{
-    VkShaderModuleCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    createInfo.codeSize = code.size();
-    createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
-    
-    VkShaderModule shaderModule;
-    if(vkCreateShaderModule(_device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to create shader module!");
-    }
-
-    return shaderModule;
-}
-
-// Overload of the above function to ease transition to SPIR-V  
-VkShaderModule rendering_system::createShaderModule(const std::vector<uint32_t>& code)
-{
-    VkShaderModuleCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    createInfo.codeSize = code.size();
-    createInfo.pCode = code.data();
-
-    VkShaderModule shaderModule;
-    if(vkCreateShaderModule(_device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to create shader module!");
-    }
-
-    return shaderModule;
-
-}
-
 void rendering_system::setScene(std::shared_ptr<Scene> scene)
 {
     _scene = scene;
