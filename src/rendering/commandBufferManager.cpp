@@ -1,4 +1,4 @@
-#include "rendering/resources/commandBuffer.hpp"
+#include "rendering/commandBufferManager.hpp"
 
 command_buffer_system::command_buffer_system(VkDevice& logicalDevice, VkCommandPool& commandPool, VkQueue& graphicsQueue) :
     _logicalDevice(logicalDevice),

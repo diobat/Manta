@@ -91,13 +91,6 @@ struct SwapChainSupportDetails{
     std::vector<VkPresentModeKHR> presentModes;
 };
 
-struct UniformBufferObject{
-    alignas(16) glm::mat4 model;
-    alignas(16) glm::mat4 view;
-    alignas(16) glm::mat4 proj;
-};
-
-
 rendering_system::rendering_system(std::shared_ptr<Scene> scene)    :
     _scene(scene),
     _memory(this, scene->getRegistry(), _device),
@@ -110,7 +103,6 @@ rendering_system::rendering_system(std::shared_ptr<Scene> scene)    :
     init();
 }
 
-
 void rendering_system::init()
 {
     initWindow();
@@ -120,7 +112,6 @@ void rendering_system::init()
 void rendering_system::initWindow()
 {
     glfwInit();
-
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
     settingsData settings = getSettingsData(_scene->getRegistry());
@@ -359,10 +350,7 @@ void rendering_system::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32
 
     vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    // vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _graphicsPipeline);
-
-    shaderPipeline tempPipeline = _pipelines.getPipeline("basic");
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, tempPipeline.pipeline);
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelines.getPipeline("basic").pipeline);
 
     VkViewport viewport{};
     viewport.x = 0.0f;
@@ -382,8 +370,8 @@ void rendering_system::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
     vkCmdBindIndexBuffer(commandBuffer, _indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, tempPipeline.layout, 0, 1, &_descriptorSets[_currentFrame], 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelines.getPipeline("basic").layout, 0, 1, &_descriptorSets[_currentFrame], 0, nullptr);
+    
     vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(_indices.size()), 1, 0, 0, 0);
 
     vkCmdEndRenderPass(_commandBuffers[_currentFrame]);
@@ -784,6 +772,9 @@ void rendering_system::drawFrame()
 
     vkResetFences(_device, 1, &_inFlightFences[_currentFrame]);
     vkResetCommandBuffer(_commandBuffers[_currentFrame], 0);
+
+    // Begin recording command buffer
+
     recordCommandBuffer(_commandBuffers[_currentFrame], imageIndex);
 
     updateUniformBuffer(_currentFrame);
@@ -838,7 +829,7 @@ void rendering_system::drawFrame()
 
 void rendering_system::updateUniformBuffer(uint32_t currentImage)
 {
-    UniformBufferObject ubo{};
+    MVPMatrix ubo{};
 
     entt::entity activeCamera = _scene->getActiveCamera();
 
@@ -846,8 +837,8 @@ void rendering_system::updateUniformBuffer(uint32_t currentImage)
 
     ubo.view = mvp.view;
     ubo.model = mvp.model;
-    ubo.proj = mvp.projection;
-    ubo.proj[1][1] *= -1;
+    ubo.projection = mvp.projection;
+    ubo.projection[1][1] *= -1;
 
     auto& cameraUBOs = _scene->getRegistry().get<memoryBuffers>(activeCamera);
 
@@ -863,7 +854,6 @@ void rendering_system::cleanup()
     vkDestroyImageView(_device, _textureImage.imageView, nullptr);
     vkDestroyImage(_device, _textureImage.image, nullptr);
     vkFreeMemory(_device, _textureImage.memory, nullptr);
-
 
     // Free uniform buffers
     unsigned int framesinFlight = getSettingsData(_scene->getRegistry()).framesInFlight;

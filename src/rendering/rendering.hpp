@@ -8,7 +8,7 @@
 
 #include "rendering/resources/vertex.hpp"
 #include "ECS/ECS.hpp"
-#include "rendering/resources/commandBuffer.hpp"
+#include "rendering/commandBufferManager.hpp"
 #include "rendering/resources/memory.hpp"
 #include "rendering/resources/texture.hpp"
 #include "rendering/shaderManager.hpp"
