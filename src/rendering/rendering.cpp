@@ -17,7 +17,7 @@
 #include "core/settings.hpp"
 #include "ECS/components/camera.hpp"
 #include "ECS/components/model.hpp"
-#include "util/queueFamilies.hpp"
+#include "util/physicalDeviceHelper.hpp"
 
 #include "rendering/descriptors/descriptorBuilder.hpp"
 
@@ -50,30 +50,14 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
     }
 }
 
-// struct QueueFamilyIndices{
-//     std::optional<uint32_t> graphicsFamily;
-//     std::optional<uint32_t> transferFamily;
-//     std::optional<uint32_t> presentFamily;
-
-//     bool isComplete(){
-//         return graphicsFamily.has_value() && presentFamily.has_value() && transferFamily.has_value();
-//     }
-// };
-
-// struct SwapChainSupportDetails{
-//     VkSurfaceCapabilitiesKHR capabilities;
-//     std::vector<VkSurfaceFormatKHR> formats;
-//     std::vector<VkPresentModeKHR> presentModes;
-// };
-
 rendering_system::rendering_system(std::shared_ptr<Scene> scene)    :
     _scene(scene),
     _memory(this, scene->getRegistry(), _device),
     _commandBuffer(this, _commandPool , _graphicsQueue),
     _texture(this),
     _shaders(this), 
-    _pipelines(this), 
-    _swapChains(this, _surface)
+    _pipelines(this) 
+    //_swapChains(this, _surface)
 {
     init();
 }
@@ -103,6 +87,7 @@ void rendering_system::initVulkan()
     createSurface();
     pickPhysicalDevice();
     createLogicalDevice();
+    //_swapChains.createSwapChain();
 
     // Shader initialization
     std::string shaderFolder = "res/shaders/";
@@ -118,10 +103,12 @@ void rendering_system::initRender()
 {
     // Rendering initialization
     createSwapChain();  
-    createImageViews();
+    
     createRenderPass();
     createGraphicsPipeline();
     createCommandPool();
+
+    createImageViews();
     createDepthResources();
     createFramebuffers();
 }
@@ -151,33 +138,34 @@ void rendering_system::loadModel()
     _indices = mesh.indices;
 }
 
-VkFormat rendering_system::findDepthFormat()
-{
-    return findSupportedFormat(
-        {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
-        VK_IMAGE_TILING_OPTIMAL,
-        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
-    );
-}
+// VkFormat rendering_system::findDepthFormat()
+// {
+//     return findSupportedFormat(
+//         _physicalDevice,
+//         {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
+//         VK_IMAGE_TILING_OPTIMAL,
+//         VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
+//     );
+// }
 
-VkFormat rendering_system::findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
-{
-    for(VkFormat format : candidates){
-        VkFormatProperties props; 
-        vkGetPhysicalDeviceFormatProperties(_physicalDevice, format, &props);
+// VkFormat rendering_system::findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
+// {
+//     for(VkFormat format : candidates){
+//         VkFormatProperties props; 
+//         vkGetPhysicalDeviceFormatProperties(_physicalDevice, format, &props);
         
-        if(tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features){
-            return format;
-        } else if(tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features){
-            return format;
-        }
-    }
-    throw std::runtime_error("failed to find supported format!");
-}
+//         if(tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features){
+//             return format;
+//         } else if(tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features){
+//             return format;
+//         }
+//     }
+//     throw std::runtime_error("failed to find supported format!");
+// }
 
 void rendering_system::createDepthResources()
 {
-    VkFormat depthFormat = findDepthFormat();
+    VkFormat depthFormat = findDepthFormat(_physicalDevice);
 
     _depthImage = _texture.createImage(_swapChainExtent.width, _swapChainExtent.height, 1, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
@@ -420,7 +408,7 @@ void rendering_system::createRenderPass()
 
     // Depth attachment
     VkAttachmentDescription depthAttachment{};
-    depthAttachment.format = findDepthFormat();
+    depthAttachment.format = findDepthFormat(_physicalDevice);
     depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -551,7 +539,9 @@ void rendering_system::createSwapChain()
     createInfo.presentMode = presentMode;
     createInfo.clipped = VK_TRUE;
 
-    if(vkCreateSwapchainKHR(_device, &createInfo, nullptr, &_swapChain) != VK_SUCCESS)
+    VkResult result = vkCreateSwapchainKHR(_device, &createInfo, nullptr, &_swapChain);
+
+    if(result != VK_SUCCESS)
     {
         throw std::runtime_error("failed to create swap chain!");
     }
@@ -575,9 +565,8 @@ void rendering_system::createLogicalDevice()
     QueueFamilyIndices indices = findQueueFamilies(_physicalDevice, _surface);
 
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-    std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(), indices.presentFamily.value()};
+    std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(), indices.presentFamily.value(), indices.transferFamily.value()};
 
-    
     float queuePriority = 1.0f;
     for(uint32_t queueFamily : uniqueQueueFamilies)
     {
@@ -1028,7 +1017,7 @@ VkExtent2D rendering_system::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& ca
     }
 }
 
-// QueueFamilyIndices rendering_system::findQueueFamilies(VkPhysicalDevice device) 
+// QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) 
 // {
 //     QueueFamilyIndices indices;
 

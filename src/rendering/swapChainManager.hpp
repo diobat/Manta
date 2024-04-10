@@ -3,6 +3,8 @@
 // GLFW
 #include "wrapper/glfw.hpp"
 
+#include "rendering/resources/texture.hpp"
+
 #include <vector>
 
 class rendering_system;
@@ -10,10 +12,12 @@ class rendering_system;
 struct swapChain
 {
     VkSwapchainKHR swapChain;
-    std::vector<VkImage> swapChainImages;
-    VkFormat swapChainImageFormat;
-    VkExtent2D swapChainExtent;
-    std::vector<VkImageView> swapChainImageViews;
+    std::vector<VkImage> Images;
+    image depthImage;
+    VkFormat ImageFormat;
+    VkExtent2D Extent;
+    std::vector<VkImageView> ImageViews;
+    std::vector<VkFramebuffer> Framebuffers;
 };
 
 struct SwapChainSupportDetails{
@@ -29,6 +33,9 @@ public:
     swap_chain_system(rendering_system* core, VkSurfaceKHR& surface);
 
     bool createSwapChain();
+    void createImageViews();
+    void createDepthResources();
+    void createFramebuffers();
 
     void cleanup();
 

@@ -100,8 +100,8 @@ private:
             VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
         void createImageViews();
         void createRenderPass();
-            VkFormat findDepthFormat();
-                VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
+            // VkFormat findDepthFormat();
+                // VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
         void createGraphicsPipeline();
         void createCommandPool();
         void createDepthResources();
@@ -142,7 +142,7 @@ private:
     texture_system _texture;                                // texture system
     shader_system _shaders;                                 // shader system
     pipeline_system _pipelines;                             // pipeline system
-    swap_chain_system _swapChains;                          // swap chain system
+    //swap_chain_system _swapChains;                          // swap chain system
 
     std::unique_ptr<DescriptorLayoutCache> _descriptorLayoutCache;
     std::unique_ptr<DescriptorAllocator> _descriptorAllocator;
