@@ -89,7 +89,6 @@ private:
         void createSurface();
         void pickPhysicalDevice();
             bool isDeviceSuitable(VkPhysicalDevice device);
-                // QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
                 bool checkDeviceExtensionSupport(VkPhysicalDevice device);
                 SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);\
         void createLogicalDevice();
@@ -100,8 +99,6 @@ private:
             VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
         void createImageViews();
         void createRenderPass();
-            // VkFormat findDepthFormat();
-                // VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
         void createGraphicsPipeline();
         void createCommandPool();
         void createDepthResources();
