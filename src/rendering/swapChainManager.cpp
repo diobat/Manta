@@ -124,6 +124,18 @@ void swap_chain_system::createFramebuffers()
     }
 }
 
+void swap_chain_system::recreate()
+{
+    vkDeviceWaitIdle(_core->getLogicalDevice());
+
+    cleanup();
+
+    createSwapChain();
+    createImageViews();
+    createDepthResources();
+    createFramebuffers();
+}
+
 void swap_chain_system::cleanup()
 {
     for(auto imageView : _swapChain.ImageViews)

@@ -37,6 +37,8 @@ public:
     void createDepthResources();
     void createFramebuffers();
 
+    void recreate();
+
     void cleanup();
 
     swapChain& getSwapChain();

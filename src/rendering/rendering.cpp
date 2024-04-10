@@ -56,8 +56,8 @@ rendering_system::rendering_system(std::shared_ptr<Scene> scene)    :
     _commandBuffer(this, _commandPool , _graphicsQueue),
     _texture(this),
     _shaders(this), 
-    _pipelines(this) 
-    //_swapChains(this, _surface)
+    _pipelines(this),
+    _swapChains(this, _surface)
 {
     init();
 }
@@ -87,7 +87,6 @@ void rendering_system::initVulkan()
     createSurface();
     pickPhysicalDevice();
     createLogicalDevice();
-    //_swapChains.createSwapChain();
 
     // Shader initialization
     std::string shaderFolder = "res/shaders/";
@@ -102,15 +101,15 @@ void rendering_system::initVulkan()
 void rendering_system::initRender()
 {
     // Rendering initialization
-    createSwapChain();  
+    _swapChains.createSwapChain();
     
     createRenderPass();
     createGraphicsPipeline();
     createCommandPool();
 
-    createImageViews();
-    createDepthResources();
-    createFramebuffers();
+    _swapChains.createImageViews();
+    _swapChains.createDepthResources();
+    _swapChains.createFramebuffers();
 }
 
 void rendering_system::firstTimeSetup()
@@ -136,17 +135,6 @@ void rendering_system::loadModel()
     Mesh& mesh = _scene->getRegistry().get<Mesh>(model.meshes[0]);
     _vertices = mesh.vertices;
     _indices = mesh.indices;
-}
-
-void rendering_system::createDepthResources()
-{
-    VkFormat depthFormat = findDepthFormat(_physicalDevice);
-
-    _depthImage = _texture.createImage(_swapChainExtent.width, _swapChainExtent.height, 1, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-    _depthImage.imageView = _texture.createImageView(_depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
-
-    _texture.transitionImageLayout(_depthImage.image, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1);
 }
 
 void rendering_system::createTextureSampler()
@@ -195,45 +183,6 @@ void rendering_system::createDescriptorSets()
     }
 }
 
-void rendering_system::recreateSwapChain()
-{
-    int width = 0, height = 0;
-    glfwGetFramebufferSize(_window, &width, &height);
-    while(width == 0 || height == 0)
-    {
-        glfwGetFramebufferSize(_window, &width, &height);
-        glfwWaitEvents();
-    }
-
-    vkDeviceWaitIdle(_device);
-
-    cleanupSwapChain();
-
-    createSwapChain();
-    createImageViews();
-    createDepthResources();
-    createFramebuffers();
-}
-
-void rendering_system::cleanupSwapChain()
-{
-    vkDestroyImageView(_device, _depthImage.imageView, nullptr);
-    vkDestroyImage(_device, _depthImage.image, nullptr);
-    vkFreeMemory(_device, _depthImage.memory, nullptr);
-
-    for(auto framebuffer : _swapChainFramebuffers)
-    {
-        vkDestroyFramebuffer(_device, framebuffer, nullptr);
-    }
-
-    for(auto imageView : _swapChainImageViews)
-    {
-        vkDestroyImageView(_device, imageView, nullptr);
-    }
-
-    vkDestroySwapchainKHR(_device, _swapChain, nullptr);
-}
-
 void rendering_system::createSyncObjects()
 {
     unsigned int framesinFlight = getSettingsData(_scene->getRegistry()).framesInFlight;
@@ -275,9 +224,9 @@ void rendering_system::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderPassInfo.renderPass = _renderPass;
-    renderPassInfo.framebuffer = _swapChainFramebuffers[imageIndex];
+    renderPassInfo.framebuffer = _swapChains.getSwapChain().Framebuffers[imageIndex];
     renderPassInfo.renderArea.offset = {0, 0};
-    renderPassInfo.renderArea.extent = _swapChainExtent;
+    renderPassInfo.renderArea.extent = _swapChains.getSwapChain().Extent;
 
     std::array<VkClearValue, 2> clearValues{};
     clearValues[0].color = {0.0f, 0.0f, 0.0f, 1.0f};
@@ -293,15 +242,15 @@ void rendering_system::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = static_cast<float>(_swapChainExtent.width);
-    viewport.height = static_cast<float>(_swapChainExtent.height);
+    viewport.width = static_cast<float>(_swapChains.getSwapChain().Extent.width);
+    viewport.height = static_cast<float>(_swapChains.getSwapChain().Extent.height);
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
     vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
     VkRect2D scissor{};
     scissor.offset = {0, 0};
-    scissor.extent = _swapChainExtent;
+    scissor.extent = _swapChains.getSwapChain().Extent;
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
     VkBuffer vertexBuffers[] = {_vertexBuffer.buffer};
@@ -370,7 +319,7 @@ void rendering_system::createRenderPass()
 {
     // Color attachment
     VkAttachmentDescription colorAttachment{};
-    colorAttachment.format = _swapChainImageFormat;
+    colorAttachment.format = _swapChains.getSwapChain().ImageFormat;
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -424,108 +373,6 @@ void rendering_system::createRenderPass()
     {
         throw std::runtime_error("failed to create render pass!");
     }
-}
-
-void rendering_system::createFramebuffers()
-{
-    _swapChainFramebuffers.resize(_swapChainImageViews.size());
-
-    for(size_t i(0); i < _swapChainImageViews.size(); ++i)
-    {
-        std::array<VkImageView, 2> attachments = {
-            _swapChainImageViews[i], 
-            _depthImage.imageView
-        };
-
-        VkFramebufferCreateInfo framebufferInfo{};
-        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = _renderPass;
-        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-        framebufferInfo.pAttachments = attachments.data();
-        framebufferInfo.width = _swapChainExtent.width;
-        framebufferInfo.height = _swapChainExtent.height;
-        framebufferInfo.layers = 1;
-
-        if(vkCreateFramebuffer(_device, &framebufferInfo, nullptr, &_swapChainFramebuffers[i]) != VK_SUCCESS)
-        {
-            throw std::runtime_error("failed to create framebuffer!");
-        }
-
-    }
-}
-
-void rendering_system::createImageViews()
-{
-    _swapChainImageViews.resize(_swapChainImages.size());
-
-    for(size_t i(0); i < _swapChainImages.size(); ++i)
-    {
-        _swapChainImageViews[i] = _texture.createImageView(_swapChainImages[i], _swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
-    }
-}
-
-void rendering_system::createSwapChain()
-{
-    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(_physicalDevice);
-
-    VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
-    VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
-    VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities);
-
-    uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
-    if(swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount)
-    {
-        imageCount = swapChainSupport.capabilities.maxImageCount;
-    }
-
-    VkSwapchainCreateInfoKHR createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    createInfo.surface = _surface;
-    createInfo.minImageCount = imageCount;
-    createInfo.imageFormat = surfaceFormat.format;
-    createInfo.imageColorSpace = surfaceFormat.colorSpace;
-    createInfo.imageExtent = extent;
-    createInfo.imageArrayLayers = 1;
-    createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-
-    QueueFamilyIndices indices = findQueueFamilies(_physicalDevice, _surface);
-
-    // Piggyback on a std::set to make them unique
-    std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(), indices.presentFamily.value(), indices.transferFamily.value()};
-    std::vector<uint32_t> queueFamilyIndices;
-    for(uint32_t queueFamily : uniqueQueueFamilies)
-    {
-        queueFamilyIndices.push_back(queueFamily);
-    }
-
-    if(uniqueQueueFamilies.size() > 1)
-    {
-        createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-        createInfo.queueFamilyIndexCount = uniqueQueueFamilies.size();
-        createInfo.pQueueFamilyIndices = queueFamilyIndices.data();
-    }
-    else
-    {
-        createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    }
-
-    createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
-    createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    createInfo.presentMode = presentMode;
-    createInfo.clipped = VK_TRUE;
-
-    VkResult result = vkCreateSwapchainKHR(_device, &createInfo, nullptr, &_swapChain);
-
-    if(result != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to create swap chain!");
-    }
-
-    vkGetSwapchainImagesKHR(_device, _swapChain, &imageCount, nullptr);
-    _swapChainImages.resize(imageCount);
-    vkGetSwapchainImagesKHR(_device, _swapChain, &imageCount, _swapChainImages.data());
-    _swapChainImageFormat = surfaceFormat.format;
-    _swapChainExtent = extent;
 }
 
 void rendering_system::createSurface()
@@ -697,11 +544,11 @@ void rendering_system::drawFrame()
     vkWaitForFences(_device, 1 , &_inFlightFences[_currentFrame], VK_TRUE, std::numeric_limits<uint64_t>::max());
 
     uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(_device, _swapChain, UINT64_MAX, _imageAvailableSemaphores[_currentFrame], VK_NULL_HANDLE, &imageIndex);
+    VkResult result = vkAcquireNextImageKHR(_device, _swapChains.getSwapChain().swapChain, UINT64_MAX, _imageAvailableSemaphores[_currentFrame], VK_NULL_HANDLE, &imageIndex);
 
     if(result == VK_ERROR_OUT_OF_DATE_KHR)
     {
-        recreateSwapChain();
+        _swapChains.recreate();
         return;
     }
     else if(result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
@@ -744,7 +591,7 @@ void rendering_system::drawFrame()
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores = signalSemaphores;
 
-    VkSwapchainKHR swapChains[] = {_swapChain};
+    VkSwapchainKHR swapChains[] = {_swapChains.getSwapChain().swapChain};
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = swapChains;
     presentInfo.pImageIndices = &imageIndex;
@@ -755,7 +602,7 @@ void rendering_system::drawFrame()
     if(result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || _framebufferResized)
     {
         _framebufferResized = false;
-        recreateSwapChain();
+        _swapChains.recreate();
     }
     else if(result != VK_SUCCESS)
     {
@@ -786,7 +633,7 @@ void rendering_system::updateUniformBuffer(uint32_t currentImage)
 void rendering_system::cleanup() 
 {
     vkDeviceWaitIdle(_device);
-    cleanupSwapChain();
+    _swapChains.cleanup();
 
     vkDestroySampler(_device, _textureSampler, nullptr);
     vkDestroyImageView(_device, _textureImage.imageView, nullptr);
@@ -942,54 +789,6 @@ SwapChainSupportDetails rendering_system::querySwapChainSupport(VkPhysicalDevice
     }
 
     return details;
-}
-
-VkSurfaceFormatKHR rendering_system::chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)
-{
-    for(const auto& availableFormat : availableFormats)
-    {
-        if(availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
-        {
-            return availableFormat;
-        }
-    }
-    return availableFormats[0];
-}
-
-VkPresentModeKHR rendering_system::chooseSwapPresentMode(const std::vector<VkPresentModeKHR> availablePresentModes)
-{
-    for (const auto& availablePresentMode : availablePresentModes)
-    {
-        if(availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR)
-        {
-            return availablePresentMode;
-        }
-    }
-
-    return VK_PRESENT_MODE_FIFO_KHR;
-}
-
-VkExtent2D rendering_system::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities)
-{
-    if(capabilities.currentExtent.width != UINT32_MAX)
-    {
-        return capabilities.currentExtent;
-    }
-    else
-    {
-        int width, height;
-        glfwGetFramebufferSize(_window, &width, &height);
-
-        VkExtent2D actualExtent = {
-            static_cast<uint32_t>(width),
-            static_cast<uint32_t>(height)
-        };
-
-        actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
-        actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
-
-        return actualExtent;
-    }
 }
 
 void rendering_system::setScene(std::shared_ptr<Scene> scene)

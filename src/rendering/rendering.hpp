@@ -63,6 +63,8 @@ public:
     command_buffer_system& getCommandBufferSystem() { return _commandBuffer; }      // command buffer system getter
     texture_system& getTextureSystem() { return _texture; }                         // texture system getter
     shader_system& getShaderSystem() { return _shaders; }                           // shader system getter
+    pipeline_system& getPipelineSystem() { return _pipelines; }                     // pipeline system getter
+    swap_chain_system& getSwapChainSystem() { return _swapChains; }                 // swap chain system getter
 
     void firstTimeSetup();
     bool firstTime = true;
@@ -93,16 +95,9 @@ private:
                 SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);\
         void createLogicalDevice();
         // Rendering setup
-        void createSwapChain();
-            VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
-            VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR> availablePresentModes);
-            VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
-        void createImageViews();
         void createRenderPass();
         void createGraphicsPipeline();
         void createCommandPool();
-        void createDepthResources();
-        void createFramebuffers();
 
         // Resource setup
         void createTextureSampler();
@@ -139,7 +134,7 @@ private:
     texture_system _texture;                                // texture system
     shader_system _shaders;                                 // shader system
     pipeline_system _pipelines;                             // pipeline system
-    //swap_chain_system _swapChains;                          // swap chain system
+    swap_chain_system _swapChains;                          // swap chain system
 
     std::unique_ptr<DescriptorLayoutCache> _descriptorLayoutCache;
     std::unique_ptr<DescriptorAllocator> _descriptorAllocator;
@@ -174,14 +169,8 @@ private:
     VkQueue _transferQueue;                                 // transfer queue
     VkQueue _presentationQueue;                             // presentation queue
 
-    VkSurfaceKHR _surface;                                  // surface
-    VkSwapchainKHR _swapChain;                              // swap chain
-    std::vector<VkImage> _swapChainImages;                  // swap chain images
-    VkFormat _swapChainImageFormat;                         // swap chain image format
-    VkExtent2D _swapChainExtent;                            // swap chain extent
-    std::vector<VkImageView> _swapChainImageViews;          // swap chain image views
     VkRenderPass _renderPass;                               // render pass
-    std::vector<VkFramebuffer> _swapChainFramebuffers;      // swap chain framebuffers
+    VkSurfaceKHR _surface;                                  // surface
 
     VkCommandPool _commandPool;                             // command pool
     VkCommandPool _transferCommandPool;                     // transfer command pool
