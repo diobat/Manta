@@ -65,7 +65,6 @@ image texture_system::createImage(uint32_t width, uint32_t height, uint32_t mipL
     return img;
 }
 
-
 image texture_system::createTextureFromImageFile(const std::string& path)
 {
     image img;
@@ -115,6 +114,52 @@ image texture_system::createTextureFromImageFile(const std::string& path)
 VkImageView texture_system::createTextureImageView(image& img, VkFormat format)
 {
     return createImageView(img, format, VK_IMAGE_ASPECT_COLOR_BIT, img.mipLevels);
+}
+
+VkImageView texture_system::createImageView(image& img, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels)
+{
+    VkImageViewCreateInfo viewInfo = {};
+    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    viewInfo.image = img.image;
+    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    viewInfo.format = format;
+    viewInfo.subresourceRange.aspectMask = aspectFlags;
+    viewInfo.subresourceRange.baseMipLevel = 0;
+    viewInfo.subresourceRange.levelCount = mipLevels;
+    viewInfo.subresourceRange.baseArrayLayer = 0;
+    viewInfo.subresourceRange.layerCount = 1;
+
+    VkImageView imageView;
+    if(vkCreateImageView(_core->getLogicalDevice(), &viewInfo, nullptr, &imageView) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to create texture image view!");
+    }
+
+    img.imageView = imageView;
+
+    return imageView;
+}
+
+VkImageView texture_system::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels)
+{
+    VkImageViewCreateInfo viewInfo = {};
+    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    viewInfo.image = image;
+    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    viewInfo.format = format;
+    viewInfo.subresourceRange.aspectMask = aspectFlags;
+    viewInfo.subresourceRange.baseMipLevel = 0;
+    viewInfo.subresourceRange.levelCount = mipLevels;
+    viewInfo.subresourceRange.baseArrayLayer = 0;
+    viewInfo.subresourceRange.layerCount = 1;
+
+    VkImageView imageView;
+    if(vkCreateImageView(_core->getLogicalDevice(), &viewInfo, nullptr, &imageView) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to create texture image view!");
+    }
+
+    return imageView;
 }
 
 void texture_system::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
@@ -215,50 +260,11 @@ void texture_system::transitionImageLayout(VkImage& image, VkFormat format, VkIm
     _core->getCommandBufferSystem().endSingleTimeCommands(commandBuffer);
 }
 
-VkImageView texture_system::createImageView(image& img, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels)
+void texture_system::cleanupImage(image& img)
 {
-    VkImageViewCreateInfo viewInfo = {};
-    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    viewInfo.image = img.image;
-    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    viewInfo.format = format;
-    viewInfo.subresourceRange.aspectMask = aspectFlags;
-    viewInfo.subresourceRange.baseMipLevel = 0;
-    viewInfo.subresourceRange.levelCount = mipLevels;
-    viewInfo.subresourceRange.baseArrayLayer = 0;
-    viewInfo.subresourceRange.layerCount = 1;
-
-    VkImageView imageView;
-    if(vkCreateImageView(_core->getLogicalDevice(), &viewInfo, nullptr, &imageView) != VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to create texture image view!");
-    }
-
-    img.imageView = imageView;
-
-    return imageView;
-}
-
-VkImageView texture_system::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels)
-{
-    VkImageViewCreateInfo viewInfo = {};
-    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    viewInfo.image = image;
-    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    viewInfo.format = format;
-    viewInfo.subresourceRange.aspectMask = aspectFlags;
-    viewInfo.subresourceRange.baseMipLevel = 0;
-    viewInfo.subresourceRange.levelCount = mipLevels;
-    viewInfo.subresourceRange.baseArrayLayer = 0;
-    viewInfo.subresourceRange.layerCount = 1;
-
-    VkImageView imageView;
-    if(vkCreateImageView(_core->getLogicalDevice(), &viewInfo, nullptr, &imageView) != VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to create texture image view!");
-    }
-
-    return imageView;
+    vkDestroyImageView(_core->getLogicalDevice(), img.imageView, nullptr);
+    vkDestroyImage(_core->getLogicalDevice(), img.image, nullptr);
+    vkFreeMemory(_core->getLogicalDevice(), img.memory, nullptr);
 }
 
 bool texture_system::hasStencilComponent(VkFormat format)
@@ -371,3 +377,4 @@ void texture_system::generateMipMaps(VkImage& image, VkFormat format, uint32_t w
 
     _core->getCommandBufferSystem().endSingleTimeCommands(commandBuffer);
 }
+

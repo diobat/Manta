@@ -32,6 +32,8 @@ class swap_chain_system
 public:
     swap_chain_system(rendering_system* core, VkSurfaceKHR& surface);
 
+    uint32_t getNextImageIndex(VkSemaphore semaphore, VkFence fence);
+
     bool createSwapChain();
     void createImageViews();
     void createDepthResources();

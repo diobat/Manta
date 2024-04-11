@@ -12,6 +12,24 @@ swap_chain_system::swap_chain_system(rendering_system* core, VkSurfaceKHR& surfa
     ;
 }
 
+uint32_t swap_chain_system::getNextImageIndex(VkSemaphore semaphore, VkFence fence)
+{
+    uint32_t imageIndex;
+    VkResult result = vkAcquireNextImageKHR(_core->getLogicalDevice(), _swapChain.swapChain, UINT64_MAX, semaphore, fence, &imageIndex);
+
+    if(result == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        recreate();
+        return getNextImageIndex(semaphore, fence);
+    }
+    else if(result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+    {
+        throw std::runtime_error("Failed to acquire swap chain image!");
+    }
+
+    return imageIndex;
+}
+
 bool swap_chain_system::createSwapChain()
 {
     
@@ -149,6 +167,8 @@ void swap_chain_system::cleanup()
     {
         vkDestroyFramebuffer(_core->getLogicalDevice(), framebuffer, nullptr);
     }
+
+    _core->getTextureSystem().cleanupImage(_swapChain.depthImage);
 
 }
 
