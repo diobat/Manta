@@ -16,7 +16,6 @@
 #include "helpers/RootDir.hpp"
 #include "core/settings.hpp"
 #include "ECS/components/camera.hpp"
-#include "ECS/components/model.hpp"
 #include "util/physicalDeviceHelper.hpp"
 
 #include "rendering/descriptors/descriptorBuilder.hpp"
@@ -129,12 +128,11 @@ void rendering_system::firstTimeSetup()
 
 void rendering_system::loadModel()
 {
-    entt::entity modelEntity = createModel(_scene->getRegistry(), MODEL_PATH);
+    entt::entity modelEntity = _modelLibrary.createModel(_scene->getRegistry(), MODEL_PATH);
     Model& model = _scene->getRegistry().get<Model>(modelEntity);
 
-    Mesh& mesh = _scene->getRegistry().get<Mesh>(model.meshes[0]);
-    _vertices = mesh.vertices;
-    _indices = mesh.indices;
+    _vertices = model.meshes->at(0).vertices;
+    _indices = model.meshes->at(0).indices;
 }
 
 void rendering_system::createTextureSampler()
@@ -253,11 +251,12 @@ void rendering_system::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32
     scissor.extent = _swapChains.getSwapChain().Extent;
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelines.getPipeline("basic").layout, 0, 1, &_descriptorSets[_currentFrame], 0, nullptr);
+
     VkBuffer vertexBuffers[] = {_vertexBuffer.buffer};
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
     vkCmdBindIndexBuffer(commandBuffer, _indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelines.getPipeline("basic").layout, 0, 1, &_descriptorSets[_currentFrame], 0, nullptr);
 
     vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(_indices.size()), 1, 0, 0, 0);
 
@@ -541,26 +540,17 @@ void rendering_system::createInstance()
 
 void rendering_system::drawFrame() 
 {
-    vkWaitForFences(_device, 1 , &_inFlightFences[_currentFrame], VK_TRUE, std::numeric_limits<uint64_t>::max());
-
-    uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(_device, _swapChains.getSwapChain().swapChain, UINT64_MAX, _imageAvailableSemaphores[_currentFrame], VK_NULL_HANDLE, &imageIndex);
-
-    if(result == VK_ERROR_OUT_OF_DATE_KHR)
-    {
-        _swapChains.recreate();
-        return;
-    }
-    else if(result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
-    {
-        throw std::runtime_error("failed to acquire swap chain image!");
-    }
-
-    vkResetFences(_device, 1, &_inFlightFences[_currentFrame]);
-    vkResetCommandBuffer(_commandBuffers[_currentFrame], 0);
-
     // Update UB's with new data
     updateUniformBuffer(_currentFrame);
+
+    vkWaitForFences(_device, 1 , &_inFlightFences[_currentFrame], VK_TRUE, std::numeric_limits<uint64_t>::max());
+
+    // Acquire image from swap chain
+    uint32_t imageIndex = _swapChains.getNextImageIndex(_imageAvailableSemaphores[_currentFrame], VK_NULL_HANDLE);
+
+    // Check if a previous frame is using this image (i.e. there is its fence to wait on)
+    vkResetFences(_device, 1, &_inFlightFences[_currentFrame]);
+    vkResetCommandBuffer(_commandBuffers[_currentFrame], 0);
 
     // Begin recording command buffer
     recordCommandBuffer(_commandBuffers[_currentFrame], imageIndex);
@@ -597,7 +587,7 @@ void rendering_system::drawFrame()
     presentInfo.pImageIndices = &imageIndex;
     presentInfo.pResults = nullptr;
 
-    result = vkQueuePresentKHR(_presentationQueue, &presentInfo);
+    VkResult result = vkQueuePresentKHR(_presentationQueue, &presentInfo);
 
     if(result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || _framebufferResized)
     {

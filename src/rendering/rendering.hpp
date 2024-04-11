@@ -8,6 +8,7 @@
 
 #include "rendering/resources/vertex.hpp"
 #include "ECS/ECS.hpp"
+#include "rendering/resources/model.hpp"
 #include "rendering/commandBufferManager.hpp"
 #include "rendering/resources/memory.hpp"
 #include "rendering/resources/texture.hpp"
@@ -59,6 +60,8 @@ public:
     GLFWwindow* getWindow() { return _window; }                                     // window getter
     VkDevice getLogicalDevice() { return _device; }                                 // logical device getter
     VkPhysicalDevice getPhysicalDevice() { return _physicalDevice; }                // physical device getter
+
+    model_mesh_library& getModelMeshLibrary() { return _modelLibrary; }         // model mesh library getter
     memory_system& getMemorySystem() { return _memory; }                            // memory system getter 
     command_buffer_system& getCommandBufferSystem() { return _commandBuffer; }      // command buffer system getter
     texture_system& getTextureSystem() { return _texture; }                         // texture system getter
@@ -129,6 +132,7 @@ private:
     Manta* _core;                                           // core
     std::shared_ptr<Scene> _scene;                          // scene
     
+    model_mesh_library _modelLibrary;                   // model mesh library
     memory_system _memory;                                  // memory system
     command_buffer_system _commandBuffer;                   // command buffer system
     texture_system _texture;                                // texture system
