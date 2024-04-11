@@ -1,94 +1,96 @@
-#include "ECS/components/model.hpp"
+#include "rendering/resources/model.hpp"
 
 // Assimp includes
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
+
 #include <assimp/postprocess.h>
 
 // First-party includes
 #include "helpers/RootDir.hpp"
 
-Model importFromFile(entt::registry& registry, const std::string& absolutePath);
-void processNode(Model& model, entt::registry& registry, const aiScene* scene, aiNode* node, const std::string& absolutePath);
-entt::entity processMesh(entt::registry& registry, const aiMesh* assimpMesh, const aiScene* scene, const std::string& absolutePath);
+
+
 std::vector<Vertex> getVertexData(const aiMesh* mesh, const aiScene* scene);
 std::vector<unsigned int> getIndexData(const aiMesh* mesh);
 
-entt::entity createModel(entt::registry& registry, const std::string& path)
+
+model_mesh_library::model_mesh_library()
+{
+    ;
+}
+
+entt::entity model_mesh_library::createModel(entt::registry& registry, const std::string& path)
 {
     entt::entity modelEntity = registry.create();
     Model& model = registry.emplace<Model>(modelEntity);
 
     std::string absolutePath = ROOT_DIR + path; 
 
-    model = importFromFile(registry, absolutePath);
+    model = importFromFile(absolutePath);
 
     return modelEntity;
 }
 
-Model importFromFile(entt::registry& registry, const std::string& absolutePath)
+Model model_mesh_library::importFromFile(const std::string& absolutePath)
 {
 
-    Model model;
-
     // Determine if meshes have already been loaded
-    if(isMeshLoaded(registry, absolutePath))
+    if(isLoaded(absolutePath))
     {
-        auto existingMeshes = getMeshes(registry, absolutePath);
-
-        for(auto mesh : existingMeshes)
-        {
-            model.meshes.push_back(mesh);
-        }
+        return Model{getMeshes(absolutePath), absolutePath};
     }
     // If the model is not loaded, load it
-    else
+
+    const aiScene* scene = importer.ReadFile(absolutePath, aiProcess_Triangulate | aiProcess_FlipUVs);
+
+    if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
     {
-        Assimp::Importer importer;
-        const aiScene* scene = importer.ReadFile(absolutePath, aiProcess_Triangulate | aiProcess_FlipUVs);
-
-        if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
-        {
-            //std::cerr << "ERROR::ASSIMP::" << importer.GetErrorString() << std::endl;
-            return Model();
-        }
-
-        // Load the model
-        processNode(model, registry, scene, scene->mRootNode, absolutePath);
+        //std::cerr << "ERROR::ASSIMP::" << importer.GetErrorString() << std::endl;
+        return Model{nullptr, ""};
     }
 
-    return model;
+    // Load the model
+    processNode(scene, scene->mRootNode, absolutePath);
+    _loadedModelPaths.push_back(absolutePath);
+
+    return Model{getMeshes(absolutePath), absolutePath};
 }
 
 
-void processNode(Model& model,entt::registry& registry, const aiScene* scene, aiNode* node, const std::string& absolutePath)
+void model_mesh_library::processNode(const aiScene* scene, aiNode* node, const std::string& absolutePath)
 {
+
 
     for (unsigned int i = 0; i < node->mNumMeshes; i++)
     {
         aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-        model.meshes.push_back(processMesh(registry, mesh, scene, absolutePath));
-    }
 
+        Mesh importedMesh = processMesh(mesh, scene, absolutePath);
+
+        if(_meshes.find(absolutePath) == _meshes.end())
+        {
+            _meshes[absolutePath] = std::make_shared<std::vector<Mesh>>();
+        }
+
+        _meshes[absolutePath]->push_back(importedMesh);
+    }
 
     // we then recursively process each of the children nodes
     for (unsigned int i = 0; i < node->mNumChildren; i++)
     {
-        processNode(model, registry, scene, node->mChildren[i], absolutePath);
+        processNode(scene, node->mChildren[i], absolutePath);
     }
 
 }
 
-entt::entity processMesh(entt::registry& registry, const aiMesh* assimpMesh, const aiScene* scene, const std::string& absolutePath)
+Mesh model_mesh_library::processMesh(const aiMesh* assimpMesh, const aiScene* scene, const std::string& absolutePath)
 {
-    entt::entity importedMeshEntity = registry.create();
-    Mesh& meshData = registry.emplace<Mesh>(importedMeshEntity);
+    Mesh importedMesh;
 
-    meshData.vertices = getVertexData(assimpMesh, scene);
-    meshData.indices = getIndexData(assimpMesh);
-    meshData.path = absolutePath;
+    importedMesh.vertices = getVertexData(assimpMesh, scene);
+    importedMesh.indices = getIndexData(assimpMesh);
+    importedMesh.path = absolutePath;
     
-    return importedMeshEntity;
+    return importedMesh;
 }
 
 std::vector<Vertex> getVertexData(const aiMesh* mesh, const aiScene* scene)
@@ -178,45 +180,27 @@ std::vector<unsigned int> getIndexData(const aiMesh* mesh)
     return indices;
 }
 
-bool isMeshLoaded(entt::registry& registry, const std::string& path)
+bool model_mesh_library::isLoaded(const std::string& path) const
 {
-    auto view = registry.view<Mesh>();
+    return std::find(_loadedModelPaths.begin(), _loadedModelPaths.end(), path) != _loadedModelPaths.end();
+}
+
+std::shared_ptr<std::vector<Mesh>> model_mesh_library::getMeshes(const std::string& path)
+{
+    return _meshes[path];
+}
+
+const Model& getModel(entt::registry& registry, const std::string& path)
+{
+    auto view = registry.view<Model>();
 
     for(auto entity : view)
     {
-        if(registry.get<Mesh>(entity).path == path)
+        if(registry.get<Model>(entity).path == path)
         {
-            return true;
+            return registry.get<Model>(entity);
         }
     }
 
-    return false;
-}
-
-std::vector<entt::entity> getMeshes(entt::registry& registry, const std::string& path)
-{
-    auto view = registry.view<Mesh>();
-
-    std::vector<entt::entity> meshes;
-
-    for(auto entity : view)
-    {
-        if(registry.get<Mesh>(entity).path == path)
-        {
-            meshes.push_back(entity);
-        }
-    }
-    return meshes;
-}
-
-std::vector<Mesh> getMeshData(entt::registry& registry, const Model& model)
-{
-    std::vector<Mesh> meshes;
-
-    for(auto mesh : model.meshes)
-    {
-        meshes.push_back(registry.get<Mesh>(mesh));
-    }
-
-    return meshes;
+    return Model();
 }
