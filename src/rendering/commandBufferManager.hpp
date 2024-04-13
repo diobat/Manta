@@ -14,8 +14,6 @@ struct FrameData
     VkSemaphore renderFinishedSemaphore;
 };
 
-
-
 class command_buffer_system
 {
 public:
@@ -23,6 +21,10 @@ public:
 
     VkCommandBuffer beginSingleTimeCommands();
     void endSingleTimeCommands(VkCommandBuffer commandBuffer);
+
+    void recordCommandBuffer(uint32_t frameIndex, uint32_t swapChainImageIndex);
+    void resetCommandBuffer(uint32_t frameIndex);
+    void submitCommandBuffer(uint32_t frameIndex, VkSemaphore imageAvailableSemaphore, VkSemaphore renderFinishedSemaphore, VkFence fence);
 
     VkCommandBuffer& getCommandBuffer(uint32_t index) { return _commandBuffers[index]; }
 

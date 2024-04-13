@@ -46,3 +46,19 @@ void command_buffer_system::endSingleTimeCommands(VkCommandBuffer commandBuffer)
 
     vkFreeCommandBuffers(_core->getLogicalDevice(), _commandPool, 1, &commandBuffer);
 }
+
+
+void command_buffer_system::recordCommandBuffer(uint32_t frameIndex, uint32_t swapChainImageIndex)
+{
+    ;
+}
+
+void command_buffer_system::resetCommandBuffer(uint32_t frameIndex)
+{
+    vkResetCommandBuffer(_commandBuffers[frameIndex], 0);
+}
+
+void command_buffer_system::submitCommandBuffer(uint32_t frameIndex, VkSemaphore imageAvailableSemaphore, VkSemaphore renderFinishedSemaphore, VkFence fence)
+{
+    ;
+}

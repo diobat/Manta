@@ -61,7 +61,8 @@ public:
     VkDevice getLogicalDevice() { return _device; }                                 // logical device getter
     VkPhysicalDevice getPhysicalDevice() { return _physicalDevice; }                // physical device getter
 
-    model_mesh_library& getModelMeshLibrary() { return _modelLibrary; }         // model mesh library getter
+    std::shared_ptr<Scene> getScene() { return _scene; }                            // scene getter
+    model_mesh_library& getModelMeshLibrary() { return _modelLibrary; }             // model mesh library getter
     memory_system& getMemorySystem() { return _memory; }                            // memory system getter 
     command_buffer_system& getCommandBufferSystem() { return _commandBuffer; }      // command buffer system getter
     texture_system& getTextureSystem() { return _texture; }                         // texture system getter

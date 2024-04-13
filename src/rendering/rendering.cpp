@@ -56,7 +56,8 @@ rendering_system::rendering_system(std::shared_ptr<Scene> scene)    :
     _texture(this),
     _shaders(this), 
     _pipelines(this),
-    _swapChains(this, _surface)
+    _swapChains(this, _surface),
+    _modelLibrary(this)
 {
     init();
 }
@@ -131,8 +132,8 @@ void rendering_system::loadModel()
     entt::entity modelEntity = _modelLibrary.createModel(_scene->getRegistry(), MODEL_PATH);
     Model& model = _scene->getRegistry().get<Model>(modelEntity);
 
-    _vertices = model.meshes->at(0).vertices;
-    _indices = model.meshes->at(0).indices;
+    _vertices = model.meshes->at(0).vertexData;
+    _indices = model.meshes->at(0).indexData;
 }
 
 void rendering_system::createTextureSampler()
@@ -253,12 +254,21 @@ void rendering_system::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32
 
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelines.getPipeline("basic").layout, 0, 1, &_descriptorSets[_currentFrame], 0, nullptr);
 
-    VkBuffer vertexBuffers[] = {_vertexBuffer.buffer};
-    VkDeviceSize offsets[] = {0};
-    vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-    vkCmdBindIndexBuffer(commandBuffer, _indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+    auto renderModels = _scene->getRegistry().view<Model>();
 
-    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(_indices.size()), 1, 0, 0, 0);
+    for(auto entity : renderModels)
+    {
+        auto& model = renderModels.get<Model>(entity);
+
+        for(auto& mesh : *model.meshes)
+        {
+            VkDeviceSize offsets[] = {0};
+            vkCmdBindVertexBuffers(commandBuffer, 0, 1, &mesh.vertexBuffer.buffer, offsets);
+            vkCmdBindIndexBuffer(commandBuffer, mesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+
+            vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(mesh.indexData.size()), 1, 0, 0, 0);
+        }
+    }
 
     vkCmdEndRenderPass(_commandBuffers[_currentFrame]);
 

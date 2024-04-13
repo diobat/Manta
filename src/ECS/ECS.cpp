@@ -20,6 +20,10 @@ entt::registry& Scene::getRegistry()
     return _registry;
 }
 
+entt::entity Scene::newEntity()
+{
+    return _registry.create();
+}
 
 entt::entity Scene::addCamera()
 {

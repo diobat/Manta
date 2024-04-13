@@ -1,4 +1,5 @@
 #include "rendering/resources/model.hpp"
+#include "rendering/rendering.hpp"
 
 // Assimp includes
 
@@ -13,19 +14,20 @@ std::vector<Vertex> getVertexData(const aiMesh* mesh, const aiScene* scene);
 std::vector<unsigned int> getIndexData(const aiMesh* mesh);
 
 
-model_mesh_library::model_mesh_library()
+model_mesh_library::model_mesh_library(rendering_system* core)    :
+    _core(core)
 {
     ;
 }
 
 entt::entity model_mesh_library::createModel(entt::registry& registry, const std::string& path)
 {
-    entt::entity modelEntity = registry.create();
-    Model& model = registry.emplace<Model>(modelEntity);
+    entt::entity modelEntity = _core->getScene()->newEntity();
 
     std::string absolutePath = ROOT_DIR + path; 
 
-    model = importFromFile(absolutePath);
+    Model& model = importFromFile(absolutePath);
+    registry.emplace<Model>(modelEntity, model);
 
     return modelEntity;
 }
@@ -55,11 +57,8 @@ Model model_mesh_library::importFromFile(const std::string& absolutePath)
     return Model{getMeshes(absolutePath), absolutePath};
 }
 
-
 void model_mesh_library::processNode(const aiScene* scene, aiNode* node, const std::string& absolutePath)
 {
-
-
     for (unsigned int i = 0; i < node->mNumMeshes; i++)
     {
         aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
@@ -86,8 +85,10 @@ Mesh model_mesh_library::processMesh(const aiMesh* assimpMesh, const aiScene* sc
 {
     Mesh importedMesh;
 
-    importedMesh.vertices = getVertexData(assimpMesh, scene);
-    importedMesh.indices = getIndexData(assimpMesh);
+    importedMesh.vertexData = getVertexData(assimpMesh, scene);
+    importedMesh.vertexBuffer = _core->getMemorySystem().createVertexBuffer(importedMesh.vertexData);
+    importedMesh.indexData = getIndexData(assimpMesh);
+    importedMesh.indexBuffer = _core->getMemorySystem().createIndexBuffer(importedMesh.indexData);
     importedMesh.path = absolutePath;
     
     return importedMesh;
