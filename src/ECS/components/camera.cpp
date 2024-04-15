@@ -15,8 +15,12 @@ entt::entity createCamera(entt::registry& registry, const glm::vec3& positionVal
 {
     entt::entity entity = registry.create();
 
-    registry.emplace<position>(entity, positionValue);
-    registry.emplace<rotation>(entity, rotationValue);
+    registry.emplace<position>(entity, positionValue); 
+
+    // Initialize rotation with euler angles
+    glm::quat rot = glm::quat(glm::vec3( rotationValue.x, 0.0f, rotationValue.y));
+
+    registry.emplace<rotation>(entity, rot);
 
     glm::mat4 model = glm::mat4(1.0f);
     glm::mat4 view = glm::mat4(1.0f);
@@ -34,7 +38,8 @@ entt::entity createCamera(entt::registry& registry, const glm::vec3& positionVal
 const MVPMatrix& recalculateMVP(entt::registry& registry, entt::entity camera)
 {
     glm::vec3& pos = registry.get<position>(camera).value;
-    glm::vec2& rot = registry.get<rotation>(camera).value;
+    glm::quat& rotQuat = registry.get<rotation>(camera).value;
+    glm::vec3 rot = glm::eulerAngles(rotQuat);
 
     MVPMatrix& mvp = registry.get<MVPMatrix>(camera);
 
@@ -45,7 +50,6 @@ const MVPMatrix& recalculateMVP(entt::registry& registry, entt::entity camera)
     };
 
     mvp.view = glm::lookAt(pos, pos + dir, glm::vec3(0.0f, 1.0f, 0.0f));
-    // mvp.value = mvp.projection * mvp.view;
 
     return mvp;
 }
@@ -53,9 +57,13 @@ const MVPMatrix& recalculateMVP(entt::registry& registry, entt::entity camera)
 void moveCamera(entt::registry& registry, entt::entity camera, relativeDirections direction)
 {
     auto& pos = registry.get<position>(camera).value;
-    auto& rot = registry.get<rotation>(camera).value;
+    auto& rotQuat = registry.get<rotation>(camera).value;
     auto& camSet = registry.get<cameraSettings>(camera);
 
+    // Quaternion to euler angles
+    glm::vec3 rot = glm::eulerAngles(rotQuat);
+
+    // Euler angles to direction vector
     glm::vec3 dir = glm::vec3{
     std::cos(rot.x) * std::cos(rot.y),
     std::sin(rot.y),
@@ -102,5 +110,8 @@ void rotateCamera(entt::registry& registry, entt::entity camera, const glm::vec2
         rot.y = -1.57f;
     }
 
-    deltaRotation(registry, camera, {-delta.x * camSet.rotationSpeed, -delta.y * camSet.rotationSpeed});
+    // vec2 to quaternion
+    glm::quat deltaQuat = glm::quat(glm::vec3( -1.0f * delta.x * camSet.rotationSpeed, 0.0f, 1.0f * delta.y * camSet.rotationSpeed));
+
+    deltaRotation(registry, camera, deltaQuat);
 }
