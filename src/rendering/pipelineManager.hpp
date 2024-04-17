@@ -85,7 +85,7 @@ private:
     VkPipelineColorBlendAttachmentState _colorBlendAttachment;
 
     // Defines the layout of the descriptor sets that will be used in the pipeline
-    VkPipelineLayout createPipelineLayout(std::vector<VkDescriptorSetLayout> descriptorSetLayout);
+    VkPipelineLayout createPipelineLayout(const std::vector<VkDescriptorSetLayout>& descriptorSetLayout, const std::vector<VkPushConstantRange>& pushConstantRanges);
     VkPipelineLayout _pipelineLayout;
 
     // Defines the render pass that the pipeline will be used with

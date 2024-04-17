@@ -98,6 +98,8 @@ VkPipelineLayout pipeline_system::generatePipelineLayout(const shaderProgram& pr
     // Create a vector of descriptor set layouts for each set
     std::vector<std::vector<VkDescriptorSetLayoutBinding>> descriptorSetLayoutBindings;
     descriptorSetLayoutBindings.resize(maxSets);
+    // Same for push constant ranges
+    std::vector<VkPushConstantRange> pushConstantRanges;
 
     std::set<uint32_t> descriptorSetsUsed;
 
@@ -114,6 +116,16 @@ VkPipelineLayout pipeline_system::generatePipelineLayout(const shaderProgram& pr
         spirv_cross::Compiler comp(std::move(spirv)); 
 
         spirv_cross::ShaderResources resources = comp.get_shader_resources();
+
+        // Push constants
+        for (auto& resource : resources.push_constant_buffers) 
+        {
+            VkPushConstantRange pushConstantRange{};
+            pushConstantRange.stageFlags = _core->getShaderSystem().getVkShaderStageFlagBits(shader.type);
+            pushConstantRange.offset = pushConstantRanges.empty() ? 0 : pushConstantRanges.back().offset + pushConstantRanges.back().size;
+            pushConstantRange.size = comp.get_declared_struct_size(comp.get_type(resource.base_type_id));
+            pushConstantRanges.push_back(pushConstantRange);
+        }
 
         // Uniform buffers
         for (auto& resource : resources.uniform_buffers) 
@@ -160,7 +172,7 @@ VkPipelineLayout pipeline_system::generatePipelineLayout(const shaderProgram& pr
         }
 
     }
-    VkPipelineLayout pipelineLayout = createPipelineLayout(descriptorSetLayouts);
+    VkPipelineLayout pipelineLayout = createPipelineLayout(descriptorSetLayouts, pushConstantRanges);
 
     vkDestroyDescriptorSetLayout(_core->getLogicalDevice(), descriptorSetLayouts[0], nullptr);
 
@@ -271,7 +283,7 @@ VkPipelineRasterizationStateCreateInfo pipeline_system::createRasterizerInfo()
     _rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     _rasterizer.lineWidth = 1.0f;
     _rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-    _rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    _rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
     _rasterizer.depthBiasEnable = VK_FALSE;
     _rasterizer.depthBiasConstantFactor = 0.0f; // Optional
     _rasterizer.depthBiasClamp = 0.0f; // Optional
@@ -341,7 +353,7 @@ VkPipelineColorBlendStateCreateInfo pipeline_system::createColorBlendingInfo()
     return _colorBlending;
 }
 
-VkPipelineLayout pipeline_system::createPipelineLayout(std::vector<VkDescriptorSetLayout> descriptorSetLayout)
+VkPipelineLayout pipeline_system::createPipelineLayout(const std::vector<VkDescriptorSetLayout>& descriptorSetLayout, const std::vector<VkPushConstantRange>& pushConstantRanges)
 {
     
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
@@ -350,6 +362,9 @@ VkPipelineLayout pipeline_system::createPipelineLayout(std::vector<VkDescriptorS
     pipelineLayoutInfo.pSetLayouts = descriptorSetLayout.data();
     pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
     pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
+
+    pipelineLayoutInfo.pushConstantRangeCount = static_cast<uint32_t>(pushConstantRanges.size());
+    pipelineLayoutInfo.pPushConstantRanges = pushConstantRanges.data();
 
     if(vkCreatePipelineLayout(_core->getLogicalDevice(), &pipelineLayoutInfo, nullptr, &_pipelineLayout) != VK_SUCCESS)
     {
