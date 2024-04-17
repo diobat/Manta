@@ -8,10 +8,6 @@
 // First-party includes
 #include "helpers/RootDir.hpp"
 
-
-// std::vector<Vertex> getVertexData(const aiMesh* mesh, const aiScene* scene);
-// std::vector<unsigned int> getIndexData(const aiMesh* mesh);
-
 namespace
 {
     std::vector<Vertex> getVertexData(const aiMesh* mesh, const aiScene* scene) {
@@ -102,23 +98,10 @@ namespace
 
 }
 
-
 model_mesh_library::model_mesh_library(rendering_system* core)    :
     _core(core)
 {
     ;
-}
-
-entt::entity model_mesh_library::createModel(entt::registry& registry, const std::string& path)
-{
-    entt::entity modelEntity = _core->getScene()->newEntity();
-
-    std::string absolutePath = ROOT_DIR + path; 
-
-    Model& model = importFromFile(absolutePath);
-    registry.emplace<Model>(modelEntity, model);
-
-    return modelEntity;
 }
 
 Model model_mesh_library::importFromFile(const std::string& absolutePath)
@@ -146,6 +129,30 @@ Model model_mesh_library::importFromFile(const std::string& absolutePath)
     return Model{getMeshes(absolutePath), absolutePath};
 }
 
+entt::entity model_mesh_library::createModel(entt::registry& registry, const std::string& path)
+{
+    entt::entity modelEntity = _core->getScene()->newEntity();
+
+    std::string absolutePath = ROOT_DIR + path; 
+
+    Model& model = importFromFile(absolutePath);
+    registry.emplace<Model>(modelEntity, model);
+
+    return modelEntity;
+}
+
+void model_mesh_library::cleanup()
+{
+    for(auto& mesh : _meshes)
+    {
+        for(auto& meshData : *mesh.second)
+        {
+            _core->getMemorySystem().freeBuffer(meshData.vertexBuffer);
+            _core->getMemorySystem().freeBuffer(meshData.indexBuffer);
+        }
+    }
+}
+
 void model_mesh_library::processNode(const aiScene* scene, aiNode* node, const std::string& absolutePath)
 {
     for (unsigned int i = 0; i < node->mNumMeshes; i++)
@@ -167,7 +174,6 @@ void model_mesh_library::processNode(const aiScene* scene, aiNode* node, const s
     {
         processNode(scene, node->mChildren[i], absolutePath);
     }
-
 }
 
 Mesh model_mesh_library::processMesh(const aiMesh* assimpMesh, const aiScene* scene, const std::string& absolutePath)
@@ -182,7 +188,6 @@ Mesh model_mesh_library::processMesh(const aiMesh* assimpMesh, const aiScene* sc
     
     return importedMesh;
 }
-
 
 bool model_mesh_library::isLoaded(const std::string& path) const
 {

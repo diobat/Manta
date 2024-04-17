@@ -516,6 +516,7 @@ void rendering_system::cleanup()
     vkDestroyCommandPool(_device, _commandPool, nullptr);
     vkDestroyCommandPool(_device, _transferCommandPool, nullptr);
 
+    _modelLibrary.cleanup();
     _frames.cleanup();
     _pipelines.cleanup();
     _shaders.cleanup();

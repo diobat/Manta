@@ -53,6 +53,8 @@ public:
 
     std::shared_ptr<std::vector<Mesh>> getMeshes(const std::string& path);
 
+    void cleanup();
+
 private:
     void processNode(const aiScene* scene, aiNode* node, const std::string& absolutePath);
     Mesh processMesh(const aiMesh* assimpMesh, const aiScene* scene, const std::string& absolutePath);
