@@ -105,14 +105,14 @@ std::vector<Vertex> getVertexData(const aiMesh* mesh, const aiScene* scene)
         
         // Positions
         vector.x = mesh->mVertices[i].x;
-        vector.y = mesh->mVertices[i].y;
-        vector.z = mesh->mVertices[i].z;
+        vector.y = mesh->mVertices[i].z;
+        vector.z = mesh->mVertices[i].y;
         vertex.Position = vector;
         
         // Normals
         vector.x = mesh->mNormals[i].x;
-        vector.y = mesh->mNormals[i].y;
-        vector.z = mesh->mNormals[i].z;
+        vector.y = mesh->mNormals[i].z;
+        vector.z = mesh->mNormals[i].y;
         vertex.Normal = vector;
         
         // texture coordinates

@@ -57,7 +57,8 @@ rendering_system::rendering_system(std::shared_ptr<Scene> scene)    :
     _shaders(this), 
     _pipelines(this),
     _swapChains(this, _surface),
-    _modelLibrary(this)
+    _modelLibrary(this), 
+    _frames(this)
 {
     init();
 }
@@ -118,23 +119,13 @@ void rendering_system::firstTimeSetup()
     createTextureSampler();
     _textureImage =  _texture.createTextureFromImageFile(TEXTURE_PATH);
 
-    loadModel();
-    _vertexBuffer = _memory.createVertexBuffer(_vertices); 
-    _indexBuffer = _memory.createIndexBuffer(_indices);
-
+    _frames.allocateUniformBuffers(bufferType::MODEL_MATRICES, 100);
     createDescriptorSets();
     createCommandBuffers();
     createSyncObjects();
 }
 
-void rendering_system::loadModel()
-{
-    entt::entity modelEntity = _modelLibrary.createModel(_scene->getRegistry(), MODEL_PATH);
-    Model& model = _scene->getRegistry().get<Model>(modelEntity);
 
-    _vertices = model.meshes->at(0).vertexData;
-    _indices = model.meshes->at(0).indexData;
-}
 
 void rendering_system::createTextureSampler()
 {
@@ -177,7 +168,8 @@ void rendering_system::createDescriptorSets()
     {
 	    DescriptorBuilder::begin(_descriptorLayoutCache.get(), _descriptorAllocator.get())
 		.bindBuffer(0, &cameraBuffers.buffers[i].descriptorInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
-		.bindImage(1, &_textureImage.descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+        .bindBuffer(1, &_frames.getModelMatrices().buffers[i].descriptorInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+		.bindImage(2, &_textureImage.descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.build(_descriptorSets[i]);
     }
 }
@@ -252,22 +244,31 @@ void rendering_system::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32
     scissor.extent = _swapChains.getSwapChain().Extent;
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
+    _frames.updateUniformBuffers(_currentFrame);
+
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelines.getPipeline("basic").layout, 0, 1, &_descriptorSets[_currentFrame], 0, nullptr);
 
     auto renderModels = _scene->getRegistry().view<Model>();
 
+    unsigned int i{0};
     for(auto entity : renderModels)
     {
         auto& model = renderModels.get<Model>(entity);
 
+        // Push constants
+        vkCmdPushConstants(commandBuffer, _pipelines.getPipeline("basic").layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(int), &i);
+
         for(auto& mesh : *model.meshes)
         {
+            // Attribute data
             VkDeviceSize offsets[] = {0};
             vkCmdBindVertexBuffers(commandBuffer, 0, 1, &mesh.vertexBuffer.buffer, offsets);
             vkCmdBindIndexBuffer(commandBuffer, mesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 
+            // Update Model Matrix
             vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(mesh.indexData.size()), 1, 0, 0, 0);
         }
+        i++;
     }
 
     vkCmdEndRenderPass(_commandBuffers[_currentFrame]);
@@ -657,12 +658,6 @@ void rendering_system::cleanup()
     _descriptorLayoutCache->cleanup();
     _descriptorAllocator->cleanup();
 
-    vkDestroyBuffer(_device, _vertexBuffer.buffer, nullptr);
-    vkFreeMemory(_device, _vertexBuffer.memory, nullptr);
-
-    vkDestroyBuffer(_device, _indexBuffer.buffer, nullptr);
-    vkFreeMemory(_device, _indexBuffer.memory, nullptr);
-
     for(size_t i(0); i < framesinFlight; ++i)
     {
         vkDestroySemaphore(_device, _imageAvailableSemaphores[i], nullptr);
@@ -673,6 +668,7 @@ void rendering_system::cleanup()
     vkDestroyCommandPool(_device, _commandPool, nullptr);
     vkDestroyCommandPool(_device, _transferCommandPool, nullptr);
 
+    _frames.cleanup();
     _pipelines.cleanup();
     _shaders.cleanup();
     vkDestroyRenderPass(_device, _renderPass, nullptr);

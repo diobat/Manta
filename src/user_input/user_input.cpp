@@ -69,8 +69,8 @@ namespace
 			return;
 		}
 
-		double xPos_delta = xpos - lastMousePos[0];
-		double yPos_delta = ypos - lastMousePos[1];
+		double xPos_delta = lastMousePos[0] - xpos;
+		double yPos_delta = lastMousePos[1] - ypos;
 
 		// Get and update the camera
 		auto cam = boundScene->getActiveCamera();

@@ -30,7 +30,7 @@ void setRotation(entt::registry& registry, entt::entity& entity, const glm::quat
 void deltaRotation(entt::registry& registry, entt::entity& entity, const glm::quat& value)
 {
     auto& rot = registry.get<rotation>(entity);
-    rot.value = rot.value * value ;
+    rot.value = value * rot.value ;
 }
 
 const glm::quat& getRotation(entt::registry& registry, entt::entity& entity)

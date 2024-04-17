@@ -96,22 +96,41 @@ void moveCamera(entt::registry& registry, entt::entity camera, relativeDirection
     }
 }
 
-void rotateCamera(entt::registry& registry, entt::entity camera, const glm::vec2& delta)
+#include <iostream>
+
+void rotateCamera(entt::registry& registry, entt::entity camera, const glm::vec2& deltaRot)
 {
     auto& rot = registry.get<rotation>(camera).value;
     auto& camSet = registry.get<cameraSettings>(camera);
 
-    if(rot.y > 1.57f)
-    {
-        rot.y = 1.57f;
-    }
-    else if(rot.y < -1.57f)
-    {
-        rot.y = -1.57f;
-    }
+    glm::vec2 delta = deltaRot;
 
+    // Limit the pitch
+    if(delta.y > 0.0f && glm::eulerAngles(rot).y >= glm::radians(89.0f))
+    {
+        delta.y = 0.0f;
+    }
+    if(delta.y < 0.0f && glm::eulerAngles(rot).y <= glm::radians(-89.0f))
+    {
+        delta.y = 0.0f;
+    }
+    
     // vec2 to quaternion
-    glm::quat deltaQuat = glm::quat(glm::vec3( -1.0f * delta.x * camSet.rotationSpeed, 0.0f, 1.0f * delta.y * camSet.rotationSpeed));
+    glm::quat deltaQuat = glm::quat(glm::vec3(0.0f, 0.0f, 0.0f));
+
+    deltaQuat = glm::rotate(deltaQuat, delta.x * camSet.rotationSpeed, glm::vec3(1.0f, 0.0f, 0.0f));
+    deltaQuat = glm::rotate(deltaQuat, delta.y * camSet.rotationSpeed, glm::vec3(0.0f, 1.0f, 0.0f));
 
     deltaRotation(registry, camera, deltaQuat);
+}
+
+// A function that converts an euler angle rotation delta to a quaternion delta
+glm::quat eulerToQuat(const glm::vec3& euler)
+{
+    glm::quat q = glm::quat(glm::vec3(0.0f, 0.0f, 0.0f));
+    q = glm::rotate(q, euler.x, glm::vec3(1.0f, 0.0f, 0.0f));
+    q = glm::rotate(q, euler.y, glm::vec3(0.0f, 1.0f, 0.0f));
+    q = glm::rotate(q, euler.z, glm::vec3(0.0f, 0.0f, 1.0f));
+
+    return q;
 }

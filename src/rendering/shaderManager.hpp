@@ -3,7 +3,6 @@
 #include <entt/entt.hpp>
 #include "wrapper/glfw.hpp"
 // For shader compiling
-// #include <glslang/Include/Initialize.h>
 #include <glslang/Public/ShaderLang.h>
 #include <glslang/Public/ResourceLimits.h>
 #include <SPIRV/GlslangToSpv.h>

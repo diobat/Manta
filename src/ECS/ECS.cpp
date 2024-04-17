@@ -42,6 +42,23 @@ entt::entity Scene::addCamera()
     return camera;
 }
 
+// Model
+
+entt::entity Scene::addModel(const std::string& path, const std::array<float, 3>& initialPosition, const std::array<float, 3>& initialRotation, const std::array<float, 3>& initialScale)
+{
+    entt::entity model = _core->getRendering().lock()->getModelMeshLibrary().createModel(_registry, path);
+
+    // Set spatial data
+    _registry.emplace<position>(model, glm::vec3(initialPosition[0], initialPosition[1], initialPosition[2]));
+    _registry.emplace<rotation>(model, glm::quat(glm::radians(glm::vec3(initialRotation[0], initialRotation[1], initialRotation[2]))));
+    _registry.emplace<scale>(model, glm::vec3(initialScale[0], initialScale[1], initialScale[2]));
+
+
+    return model;
+}
+
+
+// Camera
 
 void Scene::setActiveCamera(const entt::entity& camera)
 {

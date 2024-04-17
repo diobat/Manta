@@ -33,10 +33,12 @@ void Manta::init()
     m_user_input->bindToScene(m_scene);
 
     entt::entity camera = m_scene->addCamera();	
+
     m_scene->setActiveCamera(camera);
     m_rendering->setScene(m_scene);
 
     m_rendering->initRender();
+
 }
 
 entt::registry& Manta::getRegistry()
@@ -64,3 +66,11 @@ std::weak_ptr<rendering_system> Manta::getRendering() const
     return m_rendering;
 }
 
+void Manta::loadModel(
+    const std::string& path, 
+    std::array<float, 3> position, 
+    std::array<float, 3> rotation,
+    std::array<float, 3> scale)
+{
+    m_scene->addModel(path, position, rotation, scale);
+}

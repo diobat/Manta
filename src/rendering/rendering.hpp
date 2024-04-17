@@ -15,6 +15,7 @@
 #include "rendering/shaderManager.hpp"
 #include "rendering/pipelineManager.hpp"
 #include "rendering/swapChainManager.hpp"
+#include "rendering/frameManager.hpp"
 
 #include "rendering/descriptors/layoutCache.hpp"
 #include "rendering/descriptors/descriptorAllocator.hpp"
@@ -69,6 +70,7 @@ public:
     shader_system& getShaderSystem() { return _shaders; }                           // shader system getter
     pipeline_system& getPipelineSystem() { return _pipelines; }                     // pipeline system getter
     swap_chain_system& getSwapChainSystem() { return _swapChains; }                 // swap chain system getter
+    frame_manager& getFrameManager() { return _frames; }                            // frame manager getter
 
     void firstTimeSetup();
     bool firstTime = true;
@@ -140,17 +142,12 @@ private:
     shader_system _shaders;                                 // shader system
     pipeline_system _pipelines;                             // pipeline system
     swap_chain_system _swapChains;                          // swap chain system
+    frame_manager _frames;                                  // frame manager
 
     std::unique_ptr<DescriptorLayoutCache> _descriptorLayoutCache;
     std::unique_ptr<DescriptorAllocator> _descriptorAllocator;
 
     // Runtime Variables
-    std::vector<Vertex> _vertices;                          // vertices
-    std::vector<uint32_t> _indices;                         // indices
-
-    memoryBuffer _vertexBuffer;                             // vertex buffer    // model info
-    memoryBuffer _indexBuffer;                              // index buffer     // model info
-
     VkDescriptorPool _descriptorPool;                       // descriptor pool
     std::vector<VkDescriptorSet> _descriptorSets;           // descriptor sets
 
