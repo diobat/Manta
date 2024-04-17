@@ -105,7 +105,7 @@ void rendering_system::initRender()
     _swapChains.createSwapChain();
     
     createRenderPass();
-    createGraphicsPipeline();
+    _pipelines.createPipeline("basic");
     createCommandPool();
 
     _swapChains.createImageViews();
@@ -124,8 +124,6 @@ void rendering_system::firstTimeSetup()
     createCommandBuffers();
     createSyncObjects();
 }
-
-
 
 void rendering_system::createTextureSampler()
 {
@@ -318,11 +316,6 @@ void rendering_system::createCommandPool()
         throw std::runtime_error("failed to create transfer command pool!");
     }
 
-}
-
-void rendering_system::createGraphicsPipeline() 
-{
-    _pipelines.createPipeline("basic");
 }
 
 void rendering_system::createRenderPass()
@@ -551,9 +544,6 @@ void rendering_system::createInstance()
 
 void rendering_system::drawFrame() 
 {
-    // Update UB's with new data
-    updateUniformBuffer(_currentFrame);
-
     vkWaitForFences(_device, 1 , &_inFlightFences[_currentFrame], VK_TRUE, std::numeric_limits<uint64_t>::max());
 
     // Acquire image from swap chain
@@ -611,24 +601,6 @@ void rendering_system::drawFrame()
     }
 
     _currentFrame = (_currentFrame + 1) % getSettingsData(_scene->getRegistry()).framesInFlight;
-}
-
-void rendering_system::updateUniformBuffer(uint32_t currentImage)
-{
-    MVPMatrix ubo{};
-
-    entt::entity activeCamera = _scene->getActiveCamera();
-
-    const MVPMatrix& mvp = recalculateMVP(_scene->getRegistry(), activeCamera);
-
-    ubo.view = mvp.view;
-    ubo.model = mvp.model;
-    ubo.projection = mvp.projection;
-    ubo.projection[1][1] *= -1;
-
-    auto& cameraUBOs = _scene->getRegistry().get<memoryBuffers>(activeCamera);
-
-    memcpy(cameraUBOs.buffers[currentImage].mappedTo, &ubo, sizeof(ubo));
 }
 
 void rendering_system::cleanup() 

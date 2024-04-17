@@ -1,5 +1,6 @@
 #include "rendering/frameManager.hpp"
 
+#include "ECS/components/camera.hpp"
 #include "ECS/components/spatial.hpp"
 #include "rendering/rendering.hpp"
 #include "rendering/resources/memory.hpp"
@@ -21,17 +22,33 @@ void frame_manager::allocateUniformBuffers(bufferType type, uint32_t count)
     switch (type)
     {
         case bufferType::MODEL_MATRICES:
-
             _modelMatrices.buffers.resize(framesInFlight);
             _modelMatrices.buffers = _core->getMemorySystem().createUniformBuffers(sizeof(glm::mat4) * count, framesInFlight);
             break;
     }
 }
 
-
-memoryBuffer& frame_manager::updateUniformBuffers(uint32_t currentImage)
+void frame_manager::updateUniformBuffers(uint32_t currentImage)
 {
-    // Update the model matrices
+    updateModelMatrices(currentImage);
+    updateMVPMatrix(currentImage);
+}
+
+memoryBuffers& frame_manager::getModelMatrices()
+{
+    return _modelMatrices;
+}
+
+void frame_manager::cleanup()
+{
+    _core->getMemorySystem().freeBuffer(_modelMatrices);
+}
+
+
+
+void frame_manager::updateModelMatrices(uint32_t currentImage)
+{
+   // Update the model matrices
     std::vector<glm::mat4> modelMatrices;
 
     auto& registry = _core->getRegistry();
@@ -52,15 +69,22 @@ memoryBuffer& frame_manager::updateUniformBuffers(uint32_t currentImage)
 
     memcpy(_modelMatrices.buffers[currentImage].mappedTo, modelMatrices.data(), modelMatrices.size() * sizeof(glm::mat4));
 
-    return _modelMatrices.buffers[currentImage];
 }
 
-memoryBuffers& frame_manager::getModelMatrices()
+void frame_manager::updateMVPMatrix(uint32_t currentImage)
 {
-    return _modelMatrices;
-}
+    MVPMatrix ubo{};
 
-void frame_manager::cleanup()
-{
-    _core->getMemorySystem().freeBuffer(_modelMatrices);
+    entt::entity activeCamera = _core->getScene()->getActiveCamera();
+
+    const MVPMatrix& mvp = recalculateMVP(_core->getScene()->getRegistry(), activeCamera);
+
+    ubo.view = mvp.view;
+    ubo.model = mvp.model;
+    ubo.projection = mvp.projection;
+    ubo.projection[1][1] *= -1;
+
+    auto& cameraUBOs = _core->getScene()->getRegistry().get<memoryBuffers>(activeCamera);
+
+    memcpy(cameraUBOs.buffers[currentImage].mappedTo, &ubo, sizeof(ubo));
 }

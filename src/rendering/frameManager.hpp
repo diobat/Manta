@@ -19,7 +19,7 @@ public:
     frame_manager(rendering_system* core);
 
     void allocateUniformBuffers(bufferType type, uint32_t count = 1);
-    memoryBuffer& updateUniformBuffers(uint32_t currentImage);
+    void updateUniformBuffers(uint32_t currentImage);
 
     memoryBuffers& getModelMatrices();
 
@@ -27,8 +27,11 @@ public:
 
 private:
 
+    void updateModelMatrices(uint32_t currentImage);
+    void updateMVPMatrix(uint32_t currentImage);
+
     memoryBuffers _modelMatrices;
     VkDescriptorBufferInfo _modelMatricesDescriptorInfo;
-    
+
     rendering_system* _core;
-};
+};  

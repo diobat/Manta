@@ -100,14 +100,13 @@ private:
                 bool checkDeviceExtensionSupport(VkPhysicalDevice device);
                 SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);\
         void createLogicalDevice();
+
         // Rendering setup
         void createRenderPass();
-        void createGraphicsPipeline();
         void createCommandPool();
 
         // Resource setup
         void createTextureSampler();
-        void loadModel();
         void createDescriptorSets();
         void createCommandBuffers();
         void createSyncObjects();
@@ -116,11 +115,6 @@ private:
     // void mainLoop();
         //void drawFrame();
             void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
-            void updateUniformBuffer(uint32_t currentImage);
-
-    // Swap chain recreation
-    void recreateSwapChain();
-    void cleanupSwapChain();
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
         VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,

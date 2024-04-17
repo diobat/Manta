@@ -17,8 +17,6 @@ struct MVPMatrix
     alignas(16) glm::mat4 model;
     alignas(16) glm::mat4 view;
     alignas(16) glm::mat4 projection;
-    
-    // glm::mat4 value;
 };
 
 struct cameraSettings
@@ -35,7 +33,6 @@ struct cameraSettings
 entt::entity createCamera(entt::registry& registry, const glm::vec3& position = {0.0f, 0.0f, 10.0f}, const glm::vec2& rotation = {glm::half_pi<float>(), 0.0f});
 
 const MVPMatrix& recalculateMVP(entt::registry& registry, entt::entity camera);
-
 
 enum class relativeDirections : unsigned int
 {
