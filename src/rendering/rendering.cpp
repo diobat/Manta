@@ -1,6 +1,5 @@
 #include "rendering/rendering.hpp"
 
-#include <fstream>
 #include <array>
 #include <vector>
 #include <unordered_map>
@@ -17,13 +16,9 @@
 #include "core/settings.hpp"
 #include "ECS/components/camera.hpp"
 #include "util/physicalDeviceHelper.hpp"
-
 #include "rendering/descriptors/descriptorBuilder.hpp"
 
 // Data
-const std::string MODEL_PATH = "res/models/room/viking_room.obj";
-const std::string TEXTURE_PATH = "X:/Repos/Manta/res/models/room/viking_room.png";
-
 const std::vector<const char*> validationLayers = {
     "VK_LAYER_KHRONOS_validation"
 };
@@ -75,7 +70,7 @@ void rendering_system::initWindow()
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
     settingsData settings = getSettingsData(_scene->getRegistry());
-    _window = glfwCreateWindow(settings.windowWidth, settings.windowHeight, "Vulkan", nullptr, nullptr);
+    _window = glfwCreateWindow(settings.windowWidth, settings.windowHeight, "Manta", nullptr, nullptr);
     glfwSetWindowUserPointer(_window, this);
     glfwSetFramebufferSizeCallback(_window, framebufferResizeCallback);
 }
@@ -93,9 +88,8 @@ void rendering_system::initVulkan()
     std::string shaderFolder = "res/shaders/";
     _shaders.scanFolderRecursive(ROOT_DIR + shaderFolder);
 
-    // Descriptor initialization
-    _descriptorLayoutCache = std::make_unique<DescriptorLayoutCache>(_device);
-    _descriptorAllocator = std::make_unique<DescriptorAllocator>(_device);
+    // Frame initialization
+    _frames.initDescriptorBuilder();
 
 }
 
@@ -117,11 +111,11 @@ void rendering_system::firstTimeSetup()
 {
     // Resource initialization
     createTextureSampler();
-    _textureImage =  _texture.createTextureFromImageFile(TEXTURE_PATH);
+    _textureImage =  _texture.createTextureFromImageFile("X:/Repos/Manta/res/models/room/viking_room.png");
 
     _frames.allocateUniformBuffers(bufferType::MODEL_MATRICES, 100);
-    createDescriptorSets();
-    createCommandBuffers();
+    _frames.createDescriptorSets();
+    _commandBuffer.createCommandBuffers();
     createSyncObjects();
 }
 
@@ -151,24 +145,6 @@ void rendering_system::createTextureSampler()
 
     if(vkCreateSampler(_device, &samplerInfo, nullptr, &_textureSampler) != VK_SUCCESS){
         throw std::runtime_error("failed to create texture sampler!");
-    }
-}
-
-void rendering_system::createDescriptorSets()
-{
-    unsigned int framesinFlight = getSettingsData(_scene->getRegistry()).framesInFlight;
-
-    _descriptorSets.resize(framesinFlight);
-
-    memoryBuffers& cameraBuffers = _scene->getRegistry().get<memoryBuffers>( _scene->getActiveCamera() );
-
-    for(size_t i = 0; i < framesinFlight; i++)
-    {
-	    DescriptorBuilder::begin(_descriptorLayoutCache.get(), _descriptorAllocator.get())
-		.bindBuffer(0, &cameraBuffers.buffers[i].descriptorInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
-        .bindBuffer(1, &_frames.getModelMatrices().buffers[i].descriptorInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
-		.bindImage(2, &_textureImage.descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
-		.build(_descriptorSets[i]);
     }
 }
 
@@ -244,7 +220,7 @@ void rendering_system::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32
 
     _frames.updateUniformBuffers(_currentFrame);
 
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelines.getPipeline("basic").layout, 0, 1, &_descriptorSets[_currentFrame], 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelines.getPipeline("basic").layout, 0, 1, &_frames.getDescriptorSet(_currentFrame), 0, nullptr);
 
     auto renderModels = _scene->getRegistry().view<Model>();
 
@@ -269,30 +245,12 @@ void rendering_system::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32
         i++;
     }
 
-    vkCmdEndRenderPass(_commandBuffers[_currentFrame]);
+    vkCmdEndRenderPass(commandBuffer);
 
     if(vkEndCommandBuffer(commandBuffer) != VK_SUCCESS)
     {
         throw std::runtime_error("failed to record command buffer!");
     }        
-}
-
-void rendering_system::createCommandBuffers()
-{
-    unsigned int framesinFlight = getSettingsData(_scene->getRegistry()).framesInFlight;
-
-    _commandBuffers.resize(framesinFlight);
-
-    VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool = _commandPool;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = (uint32_t) _commandBuffers.size();
-
-    if(vkAllocateCommandBuffers(_device, &allocInfo, _commandBuffers.data()) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to allocate command buffers!");
-    }
 }
 
 void rendering_system::createCommandPool()
@@ -551,10 +509,10 @@ void rendering_system::drawFrame()
 
     // Check if a previous frame is using this image (i.e. there is its fence to wait on)
     vkResetFences(_device, 1, &_inFlightFences[_currentFrame]);
-    vkResetCommandBuffer(_commandBuffers[_currentFrame], 0);
+    _commandBuffer.resetCommandBuffer(_currentFrame);
 
     // Begin recording command buffer
-    recordCommandBuffer(_commandBuffers[_currentFrame], imageIndex);
+    _commandBuffer.recordCommandBuffer(_currentFrame, imageIndex);
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -565,7 +523,7 @@ void rendering_system::drawFrame()
     submitInfo.pWaitSemaphores = waitSemaphores;
     submitInfo.pWaitDstStageMask = waitStages;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &_commandBuffers[_currentFrame];
+    submitInfo.pCommandBuffers = &_commandBuffer.getCommandBuffer(_currentFrame);
 
     VkSemaphore signalSemaphores[] = {_renderFinishedSemaphores[_currentFrame]};
     submitInfo.signalSemaphoreCount = 1;
@@ -626,9 +584,6 @@ void rendering_system::cleanup()
             _memory.freeBuffer(buffers.buffers[i]);
         }
     }
-
-    _descriptorLayoutCache->cleanup();
-    _descriptorAllocator->cleanup();
 
     for(size_t i(0); i < framesinFlight; ++i)
     {

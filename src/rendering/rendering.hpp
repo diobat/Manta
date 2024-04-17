@@ -31,13 +31,9 @@ VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMes
 
 void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
 
-static std::vector<char> readFile(const std::string& filename);
-
 struct QueueFamilyIndices;
 
 struct SwapChainSupportDetails;
-
-struct UniformBufferObject;
 
 class rendering_system {
 public:
@@ -63,20 +59,24 @@ public:
     VkPhysicalDevice getPhysicalDevice() { return _physicalDevice; }                // physical device getter
 
     std::shared_ptr<Scene> getScene() { return _scene; }                            // scene getter
-    model_mesh_library& getModelMeshLibrary() { return _modelLibrary; }             // model mesh library getter
     memory_system& getMemorySystem() { return _memory; }                            // memory system getter 
-    command_buffer_system& getCommandBufferSystem() { return _commandBuffer; }      // command buffer system getter
     texture_system& getTextureSystem() { return _texture; }                         // texture system getter
     shader_system& getShaderSystem() { return _shaders; }                           // shader system getter
     pipeline_system& getPipelineSystem() { return _pipelines; }                     // pipeline system getter
+
+    command_buffer_system& getCommandBufferSystem() { return _commandBuffer; }      // command buffer system getter
     swap_chain_system& getSwapChainSystem() { return _swapChains; }                 // swap chain system getter
     frame_manager& getFrameManager() { return _frames; }                            // frame manager getter
+
+    model_mesh_library& getModelMeshLibrary() { return _modelLibrary; }             // model mesh library getter
+
 
     void firstTimeSetup();
     bool firstTime = true;
 
     VkRenderPass getRenderPass() { return _renderPass; }
     VkSampler getTextureSampler() { return _textureSampler; }
+    image getTextureImage() { return _textureImage; }
 private:
     // Initialization
     void init();
@@ -107,14 +107,8 @@ private:
 
         // Resource setup
         void createTextureSampler();
-        void createDescriptorSets();
-        void createCommandBuffers();
         void createSyncObjects();
 
-    // Where the magic happens
-    // void mainLoop();
-        //void drawFrame();
-            void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
         VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -129,7 +123,7 @@ private:
     Manta* _core;                                           // core
     std::shared_ptr<Scene> _scene;                          // scene
     
-    model_mesh_library _modelLibrary;                   // model mesh library
+    model_mesh_library _modelLibrary;                       // model mesh library
     memory_system _memory;                                  // memory system
     command_buffer_system _commandBuffer;                   // command buffer system
     texture_system _texture;                                // texture system
@@ -138,20 +132,15 @@ private:
     swap_chain_system _swapChains;                          // swap chain system
     frame_manager _frames;                                  // frame manager
 
-    std::unique_ptr<DescriptorLayoutCache> _descriptorLayoutCache;
-    std::unique_ptr<DescriptorAllocator> _descriptorAllocator;
-
     // Runtime Variables
-    VkDescriptorPool _descriptorPool;                       // descriptor pool
     std::vector<VkDescriptorSet> _descriptorSets;           // descriptor sets
 
     uint32_t _mipLevels = 1;                                // mip levels
 
-    image _textureImage;                                    // texture image
-
     VkSampler _textureSampler;                              // texture sampler
 
     image _depthImage;                                      // depth image
+    image _textureImage;                                    // texture image
 
     // Initialization variables
     GLFWwindow* _window;                                    // glfw window
@@ -170,7 +159,6 @@ private:
 
     VkCommandPool _commandPool;                             // command pool
     VkCommandPool _transferCommandPool;                     // transfer command pool
-    std::vector<VkCommandBuffer> _commandBuffers;           // command buffer
 
     std::vector<VkSemaphore> _imageAvailableSemaphores;     // image available semaphore
     std::vector<VkSemaphore> _renderFinishedSemaphores;     // render finished semaphore
@@ -178,5 +166,4 @@ private:
     uint32_t _currentFrame = 0;                             // current frame
 
     bool _framebufferResized = false;                       // framebuffer resized flag
-
 };

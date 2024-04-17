@@ -19,6 +19,8 @@ class command_buffer_system
 public:
     command_buffer_system(rendering_system* core, VkCommandPool& commandPool, VkQueue& graphicsQueue);
 
+    void createCommandBuffers();
+
     VkCommandBuffer beginSingleTimeCommands();
     void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 
