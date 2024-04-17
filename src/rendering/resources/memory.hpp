@@ -37,6 +37,7 @@ public:
     memoryBuffer createIndexBuffer(std::vector<uint32_t> indices);
 
     // In order to make it work for any type of object, we need to use templates
+    // Maybe this function cannot be templated and it should take the size as a parameter
     template<typename T>
     std::vector<memoryBuffer> createUniformBuffers(uint32_t count = 1)
     {
@@ -50,6 +51,9 @@ public:
         }
         return buffers;
     }
+    std::vector<memoryBuffer> createUniformBuffers(uint32_t size, uint32_t count = 1);
+
+
 
     uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 

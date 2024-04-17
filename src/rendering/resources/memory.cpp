@@ -89,6 +89,20 @@ memoryBuffer memory_system::createIndexBuffer(std::vector<uint32_t> indices)
     return indexBuffer;
 }
 
+std::vector<memoryBuffer> memory_system::createUniformBuffers(uint32_t size, uint32_t count)
+{
+    std::vector<memoryBuffer> buffers(count);
+
+    for (uint32_t i = 0; i < count; i++)
+    {
+        buffers[i] = createBuffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        buffers[i].descriptorInfo = { buffers[i].buffer, 0, size };
+        vkMapMemory(_logicalDevice, buffers[i].memory, 0, size, 0, &buffers[i].mappedTo);
+    }
+    return buffers;
+}
+
+
 
 uint32_t memory_system::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
 {
