@@ -2,7 +2,6 @@
 #include "rendering/rendering.hpp"
 
 // Assimp includes
-
 #include <assimp/postprocess.h>
 
 // First-party includes
@@ -20,14 +19,14 @@ namespace
             
             // Positions
             vector.x = mesh->mVertices[i].x;
-            vector.y = mesh->mVertices[i].z;
-            vector.z = mesh->mVertices[i].y;
+            vector.y = mesh->mVertices[i].y;
+            vector.z = mesh->mVertices[i].z;
             vertex.Position = vector;
             
             // Normals
             vector.x = mesh->mNormals[i].x;
-            vector.y = mesh->mNormals[i].z;
-            vector.z = mesh->mNormals[i].y;
+            vector.y = mesh->mNormals[i].y;
+            vector.z = mesh->mNormals[i].z;
             vertex.Normal = vector;
             
             // texture coordinates
@@ -96,6 +95,15 @@ namespace
         return indices;
     }
 
+    std::vector<image> getTextureData(const aiMesh* mesh)
+    {
+
+    }
+
+    std::vector<image> loadMaterialTextures(aiMaterial* mat, aiTextureType type, const std::string& typeName)
+    {
+ 
+    }
 }
 
 model_mesh_library::model_mesh_library(rendering_system* core)    :
@@ -106,27 +114,25 @@ model_mesh_library::model_mesh_library(rendering_system* core)    :
 
 Model model_mesh_library::importFromFile(const std::string& absolutePath)
 {
-
     // Determine if meshes have already been loaded
     if(isLoaded(absolutePath))
     {
-        return Model{getMeshes(absolutePath), absolutePath};
+        return Model{absolutePath, getMeshes(absolutePath), nullptr};
     }
-    // If the model is not loaded, load it
 
+    // If the model is not loaded, load it
     const aiScene* scene = importer.ReadFile(absolutePath, aiProcess_Triangulate | aiProcess_FlipUVs);
 
     if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
     {
-        //std::cerr << "ERROR::ASSIMP::" << importer.GetErrorString() << std::endl;
-        return Model{nullptr, ""};
+        return Model{"", nullptr, nullptr};
     }
 
     // Load the model
     processNode(scene, scene->mRootNode, absolutePath);
     _loadedModelPaths.push_back(absolutePath);
 
-    return Model{getMeshes(absolutePath), absolutePath};
+    return Model{absolutePath, getMeshes(absolutePath), nullptr};
 }
 
 entt::entity model_mesh_library::createModel(entt::registry& registry, const std::string& path)

@@ -283,7 +283,7 @@ VkPipelineRasterizationStateCreateInfo pipeline_system::createRasterizerInfo()
     _rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     _rasterizer.lineWidth = 1.0f;
     _rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-    _rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    _rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     _rasterizer.depthBiasEnable = VK_FALSE;
     _rasterizer.depthBiasConstantFactor = 0.0f; // Optional
     _rasterizer.depthBiasClamp = 0.0f; // Optional

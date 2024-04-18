@@ -11,6 +11,7 @@
 // First party includes
 #include "rendering/resources/vertex.hpp"
 #include "rendering/resources/memory.hpp"
+#include "rendering/resources/texture.hpp"
 
 // Assimp includes
 #include <assimp/Importer.hpp>
@@ -31,15 +32,17 @@ struct Mesh
 
 struct Model
 {
-    std::shared_ptr<std::vector<Mesh>> meshes = nullptr;
     std::string path;
+
+    std::shared_ptr<std::vector<Mesh>> meshes = nullptr;
+    std::shared_ptr<std::vector<image>> textures = nullptr;
 
     glm::mat4 modelMatrix = glm::mat4(1.0f);
     
-    void operator=(const Model& other)
-    {
-        meshes = other.meshes;
+    void operator=(const Model& other) {
         path = other.path;
+        meshes = other.meshes;
+        textures = other.textures;
     }
 };	
 
@@ -52,6 +55,7 @@ public:
     entt::entity createModel(entt::registry& registry, const std::string& path);
 
     std::shared_ptr<std::vector<Mesh>> getMeshes(const std::string& path);
+    std::shared_ptr<std::vector<image>> getTextures(const std::string& path);
 
     void cleanup();
 
@@ -62,6 +66,7 @@ private:
     bool isLoaded(const std::string& path) const;
 
     std::unordered_map<std::string, std::shared_ptr<std::vector<Mesh>>> _meshes;
+
     std::vector<std::string> _loadedModelPaths;
     Assimp::Importer importer;
 
