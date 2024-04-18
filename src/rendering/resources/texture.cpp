@@ -9,7 +9,6 @@ texture_system::texture_system(rendering_system* rendering) :
     ;
 }
 
-
 image texture_system::createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties)
 {
     image img;
@@ -95,7 +94,6 @@ image texture_system::createTextureFromImageFile(const std::string& path)
 
     transitionImageLayout(img.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, img.mipLevels);
     copyBufferToImage(stagingBuffer.buffer, img.image, static_cast<uint32_t>(loadedImage.width), static_cast<uint32_t>(loadedImage.height));
-    // transitionImageLayout(img.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, img.mipLevels);
     generateMipMaps(img.image, VK_FORMAT_R8G8B8A8_SRGB, loadedImage.width, loadedImage.height, img.mipLevels);
 
     _core->getMemorySystem().freeBuffer(stagingBuffer);
