@@ -30,7 +30,7 @@ struct cameraSettings
     float rotationSpeed;
 };
 
-entt::entity createCamera(entt::registry& registry, const glm::vec3& position = {0.0f, 0.0f, 10.0f}, const glm::vec2& rotation = {glm::half_pi<float>(), 0.0f});
+entt::entity createCamera(entt::registry& registry, const glm::vec3& position = {0.0f, 0.0f, -10.0f}, const glm::vec2& rotation = {-glm::half_pi<float>(), 0.0f});
 
 const MVPMatrix& recalculateMVP(entt::registry& registry, entt::entity camera);
 
