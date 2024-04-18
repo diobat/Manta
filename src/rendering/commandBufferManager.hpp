@@ -17,8 +17,9 @@ struct FrameData
 class command_buffer_system
 {
 public:
-    command_buffer_system(rendering_system* core, VkCommandPool& commandPool, VkQueue& graphicsQueue);
+    command_buffer_system(rendering_system* core, VkQueue& graphicsQueue);
 
+    void createCommandPools();
     void createCommandBuffers();
 
     VkCommandBuffer beginSingleTimeCommands();
@@ -30,11 +31,15 @@ public:
 
     VkCommandBuffer& getCommandBuffer(uint32_t index) { return _commandBuffers[index]; }
 
+    void cleanup();
+
 private:
     rendering_system* _core;
 
     const unsigned int& _framesInFlight;
-    VkCommandPool& _commandPool;
+
+    VkCommandPool _commandPool;                             // command pool
+    VkCommandPool _transferCommandPool;                     // transfer command pool
     VkQueue& _graphicsQueue;
 
     std::vector<VkCommandBuffer> _commandBuffers;           // command buffers, one for each frame

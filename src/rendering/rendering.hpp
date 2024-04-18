@@ -48,16 +48,15 @@ public:
     // Release resources
     void cleanup();
 
-    // // Blocking function to run renderer
-    // void run();
     // Setters
     void setScene(std::shared_ptr<Scene> scene);
     // Getters
     entt::registry& getRegistry();                                                  // registry getter
     GLFWwindow* getWindow() { return _window; }                                     // window getter
+
     VkDevice getLogicalDevice() { return _device; }                                 // logical device getter
     VkPhysicalDevice getPhysicalDevice() { return _physicalDevice; }                // physical device getter
-
+    VkSurfaceKHR& getSurface() { return _surface; }                                 // surface getter
     std::shared_ptr<Scene> getScene() { return _scene; }                            // scene getter
     memory_system& getMemorySystem() { return _memory; }                            // memory system getter 
     texture_system& getTextureSystem() { return _texture; }                         // texture system getter
@@ -103,12 +102,10 @@ private:
 
         // Rendering setup
         void createRenderPass();
-        void createCommandPool();
 
         // Resource setup
         void createTextureSampler();
         void createSyncObjects();
-
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
         VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -156,9 +153,6 @@ private:
 
     VkRenderPass _renderPass;                               // render pass
     VkSurfaceKHR _surface;                                  // surface
-
-    VkCommandPool _commandPool;                             // command pool
-    VkCommandPool _transferCommandPool;                     // transfer command pool
 
     std::vector<VkSemaphore> _imageAvailableSemaphores;     // image available semaphore
     std::vector<VkSemaphore> _renderFinishedSemaphores;     // render finished semaphore

@@ -2,19 +2,40 @@
 #include "rendering/rendering.hpp"
 
 #include "core/settings.hpp"
+#include "util/physicalDeviceHelper.hpp"
 
-command_buffer_system::command_buffer_system(rendering_system* core, VkCommandPool& commandPool, VkQueue& graphicsQueue) :
+command_buffer_system::command_buffer_system(rendering_system* core, VkQueue& graphicsQueue) :
     _core(core),
-    _commandPool(commandPool),
     _graphicsQueue(graphicsQueue), 
     _framesInFlight(getSettingsData(core->getRegistry()).framesInFlight)
 {
     _commandBuffers.resize(3);
 }
 
+void command_buffer_system::createCommandPools()
+{
+    QueueFamilyIndices queueFamilyIndices = findQueueFamilies(_core->getPhysicalDevice(), _core->getSurface());
+
+    VkCommandPoolCreateInfo poolInfo{};
+    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
+
+    if(vkCreateCommandPool(_core->getLogicalDevice(), &poolInfo, nullptr, &_commandPool) != VK_SUCCESS)
+    {
+        throw std::runtime_error("failed to create command pool!");
+    }
+
+    poolInfo.queueFamilyIndex = queueFamilyIndices.transferFamily.value();
+
+    if(vkCreateCommandPool(_core->getLogicalDevice(), &poolInfo, nullptr, &_transferCommandPool) != VK_SUCCESS)
+    {
+        throw std::runtime_error("failed to create transfer command pool!");
+    }
+}
+
 void command_buffer_system::createCommandBuffers()
 {
-
     _commandBuffers.resize(_framesInFlight);
 
     VkCommandBufferAllocateInfo allocInfo{};
@@ -63,7 +84,6 @@ void command_buffer_system::endSingleTimeCommands(VkCommandBuffer commandBuffer)
 
     vkFreeCommandBuffers(_core->getLogicalDevice(), _commandPool, 1, &commandBuffer);
 }
-
 
 void command_buffer_system::recordCommandBuffer(uint32_t frameIndex, uint32_t swapChainImageIndex)
 {
@@ -154,4 +174,15 @@ void command_buffer_system::resetCommandBuffer(uint32_t frameIndex)
 void command_buffer_system::submitCommandBuffer(uint32_t frameIndex, VkSemaphore imageAvailableSemaphore, VkSemaphore renderFinishedSemaphore, VkFence fence)
 {
     ;
+}
+
+void command_buffer_system::cleanup()
+{
+    for(auto& commandBuffer : _commandBuffers)
+    {
+        vkFreeCommandBuffers(_core->getLogicalDevice(), _commandPool, 1, &commandBuffer);
+    }
+
+    vkDestroyCommandPool(_core->getLogicalDevice(), _commandPool, nullptr);
+    vkDestroyCommandPool(_core->getLogicalDevice(), _transferCommandPool, nullptr);
 }

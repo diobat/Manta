@@ -47,7 +47,7 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
 rendering_system::rendering_system(std::shared_ptr<Scene> scene)    :
     _scene(scene),
     _memory(this, scene->getRegistry(), _device),
-    _commandBuffer(this, _commandPool , _graphicsQueue),
+    _commandBuffer(this, _graphicsQueue),
     _texture(this),
     _shaders(this), 
     _pipelines(this),
@@ -57,6 +57,7 @@ rendering_system::rendering_system(std::shared_ptr<Scene> scene)    :
 {
     init();
 }
+
 
 void rendering_system::init()
 {
@@ -100,7 +101,7 @@ void rendering_system::initRender()
     
     createRenderPass();
     _pipelines.createPipeline("basic");
-    createCommandPool();
+    _commandBuffer.createCommandPools();
 
     _swapChains.createImageViews();
     _swapChains.createDepthResources();
@@ -172,29 +173,6 @@ void rendering_system::createSyncObjects()
             throw std::runtime_error("failed to create synchronization objects for a frame!");
         }
     }
-}
-
-void rendering_system::createCommandPool()
-{
-    QueueFamilyIndices queueFamilyIndices = findQueueFamilies(_physicalDevice, _surface);
-
-    VkCommandPoolCreateInfo poolInfo{};
-    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
-
-    if(vkCreateCommandPool(_device, &poolInfo, nullptr, &_commandPool) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to create command pool!");
-    }
-
-    poolInfo.queueFamilyIndex = queueFamilyIndices.transferFamily.value();
-
-    if(vkCreateCommandPool(_device, &poolInfo, nullptr, &_transferCommandPool) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to create transfer command pool!");
-    }
-
 }
 
 void rendering_system::createRenderPass()
@@ -506,22 +484,19 @@ void rendering_system::cleanup()
         }
     }
 
-    for(size_t i(0); i < framesinFlight; ++i)
-    {
+    for(size_t i(0); i < framesinFlight; ++i) {
         vkDestroySemaphore(_device, _imageAvailableSemaphores[i], nullptr);
         vkDestroySemaphore(_device, _renderFinishedSemaphores[i], nullptr);
         vkDestroyFence(_device, _inFlightFences[i], nullptr);
     }
 
-    vkDestroyCommandPool(_device, _commandPool, nullptr);
-    vkDestroyCommandPool(_device, _transferCommandPool, nullptr);
-
+    _commandBuffer.cleanup();
     _modelLibrary.cleanup();
     _frames.cleanup();
     _pipelines.cleanup();
     _shaders.cleanup();
-    vkDestroyRenderPass(_device, _renderPass, nullptr);
 
+    vkDestroyRenderPass(_device, _renderPass, nullptr);
     vkDestroyDevice(_device, nullptr);
 
     if(enableValidationLayers) 
