@@ -101,6 +101,12 @@ void frame_manager::updateModelMatrices(uint32_t currentImage)
             modelMatrix = glm::translate(modelMatrix, pos->value);
         }
 
+        rotation* rot = registry.try_get<rotation>(entity);
+        if(rot != nullptr)
+        {
+            modelMatrix = modelMatrix * glm::mat4_cast(rot->value);
+        }
+
         modelMatrices.push_back(modelMatrix);
     }
 
