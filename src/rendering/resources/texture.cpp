@@ -4,9 +4,61 @@
 #include "util/img_loader.hpp"
 
 texture_system::texture_system(rendering_system* rendering) :
-    _core(rendering)
+    _core(rendering),
+    _mipLevels(1)
 {
     ;
+}
+
+void texture_system::init()
+{
+    initTextureSampler();
+    _defaultTexture = createTextureFromImageFile("X:/Repos/Manta/res/missingTexture.png", false);
+}
+
+void texture_system::initTextureSampler()
+{
+    VkSamplerCreateInfo samplerInfo{};
+    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerInfo.magFilter = VK_FILTER_LINEAR;
+    samplerInfo.minFilter = VK_FILTER_LINEAR;
+    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.anisotropyEnable = VK_TRUE;
+
+    VkPhysicalDeviceProperties properties{};
+    vkGetPhysicalDeviceProperties(_core->getPhysicalDevice(), &properties);
+
+    samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
+    samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    samplerInfo.unnormalizedCoordinates = VK_FALSE;
+    samplerInfo.compareEnable = VK_FALSE;
+    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerInfo.mipLodBias = 0.0f;
+    samplerInfo.minLod = 0.0f;
+    samplerInfo.maxLod = static_cast<float>(_mipLevels);
+
+    if(vkCreateSampler(_core->getLogicalDevice(), &samplerInfo, nullptr, &_textureSampler) != VK_SUCCESS){
+        throw std::runtime_error("failed to create texture sampler!");
+    }
+
+    // Populate the descriptor
+    _textureSamplerDescriptor.sampler = _textureSampler;
+    _textureSamplerDescriptor.imageView = VK_NULL_HANDLE;
+    _textureSamplerDescriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+}
+
+VkSampler& texture_system::getTextureSampler()
+{
+    return _textureSampler;
+}
+
+VkDescriptorImageInfo& texture_system::getTextureSamplerDescriptor()
+{
+    return _textureSamplerDescriptor;
 }
 
 image texture_system::createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties)
@@ -64,7 +116,7 @@ image texture_system::createImage(uint32_t width, uint32_t height, uint32_t mipL
     return img;
 }
 
-image texture_system::createTextureFromImageFile(const std::string& path)
+image texture_system::createTextureFromImageFile(const std::string& path, bool addToCache)
 {
     image img;
 
@@ -104,7 +156,13 @@ image texture_system::createTextureFromImageFile(const std::string& path)
     // Populate the descriptor image info
     img.descriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     img.descriptor.imageView = img.imageView;
-    img.descriptor.sampler = _core->getTextureSampler();
+    img.descriptor.sampler = _textureSampler;
+
+    // Add to _textures
+    if(addToCache)
+    {
+        addTextureToCache(path, img);
+    }
 
     return img;
 }
@@ -112,6 +170,33 @@ image texture_system::createTextureFromImageFile(const std::string& path)
 VkImageView texture_system::createTextureImageView(image& img, VkFormat format)
 {
     return createImageView(img, format, VK_IMAGE_ASPECT_COLOR_BIT, img.mipLevels);
+}
+
+std::vector<VkDescriptorImageInfo> texture_system::aggregateDescriptorImageInfos(size_t returnVectorSize) const
+{
+    // Get default Texture
+    std::vector<VkDescriptorImageInfo> imageInfos ;
+
+    for(auto& texture : _textures)
+    {
+        for(auto& img : *texture.second)
+        {
+            imageInfos.push_back(img.descriptor);
+        }
+    }
+
+    if(imageInfos.size() > returnVectorSize)
+    {
+        std::runtime_error("The number of textures in cache set exceeds the maximum number of textures allowed by argument");
+    }
+    else if (imageInfos.size() < returnVectorSize)
+    {
+        for(size_t i = imageInfos.size(); i < returnVectorSize; i++)
+        {
+            imageInfos.push_back(_defaultTexture.descriptor);
+        }
+    }
+    return imageInfos;
 }
 
 VkImageView texture_system::createImageView(image& img, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels)
@@ -263,6 +348,31 @@ void texture_system::cleanupImage(image& img)
     vkDestroyImageView(_core->getLogicalDevice(), img.imageView, nullptr);
     vkDestroyImage(_core->getLogicalDevice(), img.image, nullptr);
     vkFreeMemory(_core->getLogicalDevice(), img.memory, nullptr);
+}
+
+void texture_system::cleanup()
+{
+    for(auto& texture : _textures)
+    {
+        for(auto& img : *texture.second)
+        {
+            cleanupImage(img);
+        }
+    }
+
+    cleanupImage(_defaultTexture);
+    vkDestroySampler(_core->getLogicalDevice(), _textureSampler, nullptr);
+}
+
+void texture_system::addTextureToCache(const std::string& path, const image& img)
+{
+    if(_textures.find(path) == _textures.end())
+    {
+        _textures[path] = std::make_shared<std::vector<image>>();
+    }
+
+    _textures[path]->push_back(img);
+
 }
 
 bool texture_system::hasStencilComponent(VkFormat format)
