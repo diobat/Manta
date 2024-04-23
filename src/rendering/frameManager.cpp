@@ -10,7 +10,7 @@
 frame_manager::frame_manager(rendering_system* core) : 
     _core(core)
 {
-    _descriptorSets.resize(getSettingsData(_core->getRegistry()).framesInFlight);
+    ;
 }
 
 void frame_manager::initDescriptorBuilder()
@@ -23,32 +23,36 @@ void frame_manager::createDescriptorSets()
 {
     unsigned int framesinFlight = getSettingsData(_core->getScene()->getRegistry()).framesInFlight;
 
-    _descriptorSets.resize(framesinFlight);
+    // MVP Matrices descriptor set
+
+    auto& mvpDS = _bufferDescriptorSets;
+
+    mvpDS.type = descriptorSetType::MVP_MATRICES;
+    mvpDS.descriptorSets.resize(framesinFlight);
 
     memoryBuffers& cameraBuffers = _core->getScene()->getRegistry().get<memoryBuffers>( _core->getScene()->getActiveCamera() );
+
+    _textureArrayDescriptorSets = _core->getTextureSystem().aggregateDescriptorImageInfos(kTextureArraySize);
+    VkDescriptorImageInfo& samplerDescriptor = _core->getTextureSystem().getTextureSamplerDescriptor();
 
     for(size_t i = 0; i < framesinFlight; i++)
     {
 	    DescriptorBuilder::begin(_descriptorLayoutCache.get(), _descriptorAllocator.get())
 		.bindBuffer(0, &cameraBuffers.buffers[i].descriptorInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
-        .bindBuffer(1, &getModelMatrices().buffers[i].descriptorInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
-		.bindImage(2, &_core->getTextureImage().descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
-		.build(_descriptorSets[i]);
+        .bindBuffer(1, &getMemoryBuffer(descriptorSetType::MVP_MATRICES).buffers[i].descriptorInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+        .bindImageSampler(2, &samplerDescriptor, VK_SHADER_STAGE_FRAGMENT_BIT)
+		.bindImageArray(3, _textureArrayDescriptorSets, kTextureArraySize, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_SHADER_STAGE_FRAGMENT_BIT)
+		.build(mvpDS.descriptorSets[i]);
     }
 }
 
-void frame_manager::allocateUniformBuffers(bufferType type, uint32_t count)
+void frame_manager::allocateUniformBuffers(uint32_t count)
 {
-
     uint32_t framesInFlight = getSettingsData(_core->getRegistry()).framesInFlight;
 
-    switch (type)
-    {
-        case bufferType::MODEL_MATRICES:
-            _modelMatrices.buffers.resize(framesInFlight);
-            _modelMatrices.buffers = _core->getMemorySystem().createUniformBuffers(sizeof(glm::mat4) * count, framesInFlight);
-            break;
-    }
+    auto& dsBuffer = _bufferDescriptorSets.buffer.buffers;
+    dsBuffer.resize(framesInFlight);
+    dsBuffer = _core->getMemorySystem().createUniformBuffers(sizeof(glm::mat4) * count, framesInFlight);
 }
 
 void frame_manager::updateUniformBuffers(uint32_t currentImage)
@@ -57,20 +61,36 @@ void frame_manager::updateUniformBuffers(uint32_t currentImage)
     updateMVPMatrix(currentImage);
 }
 
-memoryBuffers& frame_manager::getModelMatrices()
+memoryBuffers& frame_manager::getMemoryBuffer(descriptorSetType type)
 {
-    return _modelMatrices;
+    switch(type)
+    {
+        case descriptorSetType::MVP_MATRICES:
+            return _bufferDescriptorSets.buffer;
+            break;
+    }
+
+    std::runtime_error("Invalid descriptor set type");
 }
 
-VkDescriptorSet& frame_manager::getDescriptorSet(uint32_t index)
+VkDescriptorSet& frame_manager::getDescriptorSet(descriptorSetType type,  uint32_t index)
 {
-    return _descriptorSets[index];
+    switch (type)
+    {
+        case descriptorSetType::MVP_MATRICES:
+            return _bufferDescriptorSets.descriptorSets[index];
+            break;
+    }
+
+    std::runtime_error("Invalid descriptor set type");
 }
 
 void frame_manager::cleanup()
 {
-    _core->getMemorySystem().freeBuffer(_modelMatrices);
+    // Free the uniform buffers
+    _core->getMemorySystem().freeBuffer(_bufferDescriptorSets.buffer);
 
+    // Free the descriptor sets allocator and layout cache
     if(_descriptorLayoutCache)
     {
         _descriptorLayoutCache->cleanup();
@@ -80,7 +100,6 @@ void frame_manager::cleanup()
     {
         _descriptorAllocator->cleanup();
     }
-
 }
 
 void frame_manager::updateModelMatrices(uint32_t currentImage)
@@ -110,7 +129,7 @@ void frame_manager::updateModelMatrices(uint32_t currentImage)
         modelMatrices.push_back(modelMatrix);
     }
 
-    memcpy(_modelMatrices.buffers[currentImage].mappedTo, modelMatrices.data(), modelMatrices.size() * sizeof(glm::mat4));
+    memcpy(_bufferDescriptorSets.buffer.buffers[currentImage].mappedTo, modelMatrices.data(), modelMatrices.size() * sizeof(glm::mat4));
 
 }
 
