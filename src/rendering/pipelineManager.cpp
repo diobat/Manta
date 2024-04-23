@@ -155,6 +155,38 @@ VkPipelineLayout pipeline_system::generatePipelineLayout(const shaderProgram& pr
             descriptorSetLayoutBindings[set].push_back(layoutBinding);
         }
 
+        // Texture images
+        for (auto& resource : resources.separate_images)
+        {
+            uint32_t set = comp.get_decoration(resource.id, spv::DecorationDescriptorSet);
+
+            const spirv_cross::SPIRType &type = comp.get_type(resource.type_id);
+
+            VkDescriptorSetLayoutBinding layoutBinding{};
+            layoutBinding.binding = comp.get_decoration(resource.id, spv::DecorationBinding);
+            layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+            layoutBinding.descriptorCount = type.array[0];
+            layoutBinding.stageFlags = _core->getShaderSystem().getVkShaderStageFlagBits(shader.type);
+
+            descriptorSetsUsed.insert(set);
+            descriptorSetLayoutBindings[set].push_back(layoutBinding);
+        }
+
+        // Sampler
+        for (auto& resource : resources.separate_samplers)
+        {
+            uint32_t set = comp.get_decoration(resource.id, spv::DecorationDescriptorSet);
+
+            VkDescriptorSetLayoutBinding layoutBinding{};
+            layoutBinding.binding = comp.get_decoration(resource.id, spv::DecorationBinding);
+            layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+            layoutBinding.descriptorCount = 1;
+            layoutBinding.stageFlags = _core->getShaderSystem().getVkShaderStageFlagBits(shader.type);
+
+            descriptorSetsUsed.insert(set);
+            descriptorSetLayoutBindings[set].push_back(layoutBinding);
+        }
+
     }
 
     std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
