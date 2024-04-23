@@ -3,6 +3,8 @@
 // GLFW
 #include "wrapper/glfw.hpp"
 
+#include "rendering/descriptors/descriptorParams.hpp"
+
 #include <unordered_map>
 
 class DescriptorLayoutCache
@@ -23,10 +25,7 @@ public:
         size_t hash() const;
     };
 
-
 private:
-
-
     struct DescriptorLayoutHash		{
 
         std::size_t operator()(const DescriptorLayoutInfo& k) const{
@@ -36,5 +35,4 @@ private:
 
     std::unordered_map<DescriptorLayoutInfo, VkDescriptorSetLayout, DescriptorLayoutHash> layoutCache;
     VkDevice _device;
-
 };

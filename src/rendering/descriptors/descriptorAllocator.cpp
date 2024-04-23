@@ -2,77 +2,99 @@
 
 #include <stdexcept>
 
-namespace 
-{
-    VkDescriptorPool createPool(VkDevice device, const DescriptorAllocator::PoolSizes& poolSizes, int count, VkDescriptorPoolCreateFlags flags)
-    {
-        std::vector<VkDescriptorPoolSize> sizes;
-        sizes.reserve(poolSizes.sizes.size());
-
-        for (auto& size : poolSizes.sizes)
-        {
-            sizes.push_back({size.first, static_cast<uint32_t>(size.second * count)});
-        }
-
-        VkDescriptorPoolCreateInfo poolInfo{};
-        poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        poolInfo.flags = flags;
-        poolInfo.maxSets = count;
-        poolInfo.poolSizeCount = static_cast<uint32_t>(sizes.size());
-        poolInfo.pPoolSizes = sizes.data();
-
-        VkDescriptorPool descriptorPool;
-        if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS)
-        {
-            throw std::runtime_error("Failed to create descriptor pool");
-        }
-
-        return descriptorPool;
-    }
-}
 
 DescriptorAllocator::DescriptorAllocator(VkDevice device)  :
     _device(device)
 {
-    ;
+    resetCurrentPools();
+
+    _descriptorSizes[poolType::POOL_TYPE_BASIC] = PoolSizes().basicSizes;
+    _descriptorSizes[poolType::POOL_TYPE_BINDLESS] = PoolSizes().bindLessSizes;
 }
 
 void DescriptorAllocator::cleanup()
 {
     // delete every pool held
-    for (auto pool : _usedPools)
-    {
-        vkDestroyDescriptorPool(_device, pool, nullptr);
+    for (auto pools : _usedPools)
+    {   
+        for(auto pool : pools.second)
+        {
+            vkDestroyDescriptorPool(_device, pool, nullptr);
+        }
     }
 
-    for (auto pool : _freePools)
+    for (auto pools : _freePools)
     {
-        vkDestroyDescriptorPool(_device, pool, nullptr);
+        for(auto pool : pools.second)
+        {
+            vkDestroyDescriptorPool(_device, pool, nullptr);
+        }
     }
 }
 
-VkDescriptorPool DescriptorAllocator::grabPool()
+VkDescriptorPool DescriptorAllocator::grabPool(poolType type)
 {
     // Check if reusable pools are available
     if (_freePools.size() > 0)
     {
-        VkDescriptorPool pool = _freePools.back();
-        _freePools.pop_back();
+        VkDescriptorPool pool = _freePools[type].back();
+        _freePools[type].pop_back();
         return pool;
     }
     else
     {
         // Create a new pool
-        return createPool(_device, _descriptorSizes, 1000, 0);
+        VkDescriptorPoolCreateFlags flags = 0;
+
+        if (type == poolType::POOL_TYPE_BINDLESS)
+        {
+            flags |= VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT_EXT;
+        }
+
+        return createPool(type, _device, kMaxDescriptorSets, flags);
     }
 }
 
-bool DescriptorAllocator::allocate(VkDescriptorSet* set, VkDescriptorSetLayout layout)
+VkDescriptorPool DescriptorAllocator::createPool(poolType type, VkDevice device, int count, VkDescriptorPoolCreateFlags flags)
 {
-    if (currentPool == VK_NULL_HANDLE)
+    std::vector<VkDescriptorPoolSize> sizes = getPoolSizes(type);
+
+    VkDescriptorPoolCreateInfo poolInfo{};
+    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolInfo.flags = flags;
+    poolInfo.maxSets = count;
+    poolInfo.poolSizeCount = static_cast<uint32_t>(sizes.size());
+    poolInfo.pPoolSizes = sizes.data();
+
+    VkDescriptorPool descriptorPool;
+    if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS)
     {
-        currentPool = grabPool();
-        _usedPools.push_back(currentPool);
+        throw std::runtime_error("Failed to create descriptor pool");
+    }
+
+    return descriptorPool;
+}
+
+std::vector<VkDescriptorPoolSize> DescriptorAllocator::getPoolSizes(poolType type)
+{
+    std::vector<VkDescriptorPoolSize> sizes;
+    sizes.reserve(_descriptorSizes[type].size());
+
+    for (auto& size : _descriptorSizes[type])
+    {
+        sizes.push_back({size.first, static_cast<uint32_t>(size.second * kMaxDescriptorSets)});
+    }
+
+    return sizes;
+}
+
+
+bool DescriptorAllocator::allocate(VkDescriptorSet* set, VkDescriptorSetLayout layout, poolType type)
+{
+    if (_currentPool[type] == VK_NULL_HANDLE)
+    {
+        _currentPool[type] = grabPool(type);
+        _usedPools[type].push_back(_currentPool[type]);
     }
 
     VkDescriptorSetAllocateInfo allocInfo{};
@@ -80,7 +102,7 @@ bool DescriptorAllocator::allocate(VkDescriptorSet* set, VkDescriptorSetLayout l
     allocInfo.pNext = nullptr;
 
     allocInfo.pSetLayouts = &layout;
-    allocInfo.descriptorPool = currentPool;
+    allocInfo.descriptorPool = _currentPool[type];
     allocInfo.descriptorSetCount = 1;
 
     // Try to allocate the descriptor set
@@ -101,11 +123,11 @@ bool DescriptorAllocator::allocate(VkDescriptorSet* set, VkDescriptorSetLayout l
 
     if(needReallocate)
     {
-        // allocate a new pool and try again
-        currentPool = grabPool();
-        _usedPools.push_back(currentPool);
+        // allocate a new pool and try again'
+        _currentPool[type] = grabPool();
+        _usedPools[type].push_back(_currentPool[type]);
 
-        allocInfo.descriptorPool = currentPool;
+        allocInfo.descriptorPool = _currentPool[type];
         allocResult = vkAllocateDescriptorSets(_device, &allocInfo, set);
 
         if (allocResult == VK_SUCCESS)
@@ -121,15 +143,27 @@ bool DescriptorAllocator::allocate(VkDescriptorSet* set, VkDescriptorSetLayout l
 void DescriptorAllocator::resetPools()
 {
     // Move all used pools to free pools
-    for (auto pool : _usedPools)
+    for (auto pools : _usedPools)
     {
-        vkResetDescriptorPool(_device, pool, 0);
-        _freePools.push_back(pool);
+        for(auto pool : pools.second)
+        {
+            vkResetDescriptorPool(_device, pool, 0);
+            _freePools[pools.first].push_back(pool);
+        }
     }
 
     // Clear used pools
     _usedPools.clear();
 
     // Reset current pool
-    currentPool = VK_NULL_HANDLE;
+    resetCurrentPools();
+}
+
+void DescriptorAllocator::resetCurrentPools()
+{
+    // This resets the current pools to VK_NULL_HANDLE, POOL_TYPE_UNUSED must always be the last entry in the enum for this to work
+    for (int i{0}; i < static_cast<int>(poolType::POOL_TYPE_UNUSED) ; ++i )
+    {
+        _currentPool[static_cast<poolType>(i)] = VK_NULL_HANDLE;
+    }
 }
