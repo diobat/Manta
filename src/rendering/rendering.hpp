@@ -74,7 +74,6 @@ public:
     bool firstTime = true;
 
     VkRenderPass getRenderPass() { return _renderPass; }
-    VkSampler getTextureSampler() { return _textureSampler; }
     image getTextureImage() { return _textureImage; }
 private:
     // Initialization
@@ -131,10 +130,6 @@ private:
 
     // Runtime Variables
     std::vector<VkDescriptorSet> _descriptorSets;           // descriptor sets
-
-    uint32_t _mipLevels = 1;                                // mip levels
-
-    VkSampler _textureSampler;                              // texture sampler
 
     image _depthImage;                                      // depth image
     image _textureImage;                                    // texture image

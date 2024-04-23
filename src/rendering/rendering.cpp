@@ -111,10 +111,10 @@ void rendering_system::initRender()
 void rendering_system::firstTimeSetup()
 {
     // Resource initialization
-    createTextureSampler();
-    _textureImage =  _texture.createTextureFromImageFile("X:/Repos/Manta/res/models/room/viking_room.png");
+    _texture.init();
+    // _textureImage =  _texture.createTextureFromImageFile("X:/Repos/Manta/res/models/room/viking_room.png");
 
-    _frames.allocateUniformBuffers(bufferType::MODEL_MATRICES, 100);
+    _frames.allocateUniformBuffers(100);
     _frames.createDescriptorSets();
     _commandBuffer.createCommandBuffers();
     createSyncObjects();
@@ -142,9 +142,9 @@ void rendering_system::createTextureSampler()
     samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
     samplerInfo.mipLodBias = 0.0f;
     samplerInfo.minLod = 0.0f;
-    samplerInfo.maxLod = static_cast<float>(_mipLevels);
+    samplerInfo.maxLod = static_cast<float>(_texture.getMipLevels());
 
-    if(vkCreateSampler(_device, &samplerInfo, nullptr, &_textureSampler) != VK_SUCCESS){
+    if(vkCreateSampler(_device, &samplerInfo, nullptr, &_texture.getTextureSampler()) != VK_SUCCESS){
         throw std::runtime_error("failed to create texture sampler!");
     }
 }
@@ -465,10 +465,10 @@ void rendering_system::cleanup()
     vkDeviceWaitIdle(_device);
     _swapChains.cleanup();
 
-    vkDestroySampler(_device, _textureSampler, nullptr);
-    vkDestroyImageView(_device, _textureImage.imageView, nullptr);
-    vkDestroyImage(_device, _textureImage.image, nullptr);
-    vkFreeMemory(_device, _textureImage.memory, nullptr);
+    _texture.cleanup();
+    // vkDestroyImageView(_device, _textureImage.imageView, nullptr);
+    // vkDestroyImage(_device, _textureImage.image, nullptr);
+    // vkFreeMemory(_device, _textureImage.memory, nullptr);
 
     // Free uniform buffers
     unsigned int framesinFlight = getSettingsData(_scene->getRegistry()).framesInFlight;
