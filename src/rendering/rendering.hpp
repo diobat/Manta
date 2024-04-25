@@ -74,7 +74,6 @@ public:
     bool firstTime = true;
 
     VkRenderPass getRenderPass() { return _renderPass; }
-    image getTextureImage() { return _textureImage; }
 private:
     // Initialization
     void init();
@@ -132,7 +131,6 @@ private:
     std::vector<VkDescriptorSet> _descriptorSets;           // descriptor sets
 
     image _depthImage;                                      // depth image
-    image _textureImage;                                    // texture image
 
     // Initialization variables
     GLFWwindow* _window;                                    // glfw window

@@ -112,7 +112,7 @@ void rendering_system::firstTimeSetup()
 {
     // Resource initialization
     _texture.init();
-    // _textureImage =  _texture.createTextureFromImageFile("X:/Repos/Manta/res/models/room/viking_room.png");
+    _texture.createTexture("X:/Repos/Manta/res/models/room/viking_room.png");
 
     _frames.allocateUniformBuffers(100);
     _frames.createDescriptorSets();
@@ -466,9 +466,6 @@ void rendering_system::cleanup()
     _swapChains.cleanup();
 
     _texture.cleanup();
-    // vkDestroyImageView(_device, _textureImage.imageView, nullptr);
-    // vkDestroyImage(_device, _textureImage.image, nullptr);
-    // vkFreeMemory(_device, _textureImage.memory, nullptr);
 
     // Free uniform buffers
     unsigned int framesinFlight = getSettingsData(_scene->getRegistry()).framesInFlight;
