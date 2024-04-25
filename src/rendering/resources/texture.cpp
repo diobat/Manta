@@ -1,7 +1,7 @@
 #include "rendering/resources/texture.hpp"
 
 #include "rendering/rendering.hpp"
-#include "util/img_loader.hpp"
+#include "util/modelImporter.hpp"
 
 texture_system::texture_system(rendering_system* rendering) :
     _core(rendering),
@@ -13,7 +13,15 @@ texture_system::texture_system(rendering_system* rendering) :
 void texture_system::init()
 {
     initTextureSampler();
-    _defaultTexture = createTextureFromImageFile("X:/Repos/Manta/res/missingTexture.png", false);
+    _defaultTexture = createTexture("X:/Repos/Manta/res/missingTexture.png",E_TextureType::DIFFUSE , false);
+
+    addTextureToCache(E_TextureType::DIFFUSE, "X:/Repos/Manta/res/missingTexture.png", _defaultTexture);
+    addTextureToCache(E_TextureType::SPECULAR, "X:/Repos/Manta/res/missingTexture.png", _defaultTexture);
+    addTextureToCache(E_TextureType::NORMAL, "X:/Repos/Manta/res/missingTexture.png", _defaultTexture);
+    addTextureToCache(E_TextureType::HEIGHT, "X:/Repos/Manta/res/missingTexture.png", _defaultTexture);
+    addTextureToCache(E_TextureType::LIGHTMAP, "X:/Repos/Manta/res/missingTexture.png", _defaultTexture);
+    addTextureToCache(E_TextureType::ROUGHNESS, "X:/Repos/Manta/res/missingTexture.png", _defaultTexture);
+    addTextureToCache(E_TextureType::CUBEMAP, "X:/Repos/Manta/res/missingTexture.png", _defaultTexture);
 }
 
 void texture_system::initTextureSampler()
@@ -112,26 +120,27 @@ image texture_system::createImage(uint32_t width, uint32_t height, uint32_t mipL
     // Bind the memory
     vkBindImageMemory(_core->getLogicalDevice(), img.image, img.memory, 0);
 
-
     return img;
 }
 
-image texture_system::createTextureFromImageFile(const std::string& path, bool addToCache)
+
+// Temporary and must be removed later then texture system is fully ported
+image texture_system::createTexture(const std::string& path, E_TextureType type, bool addToCache)
 {
     image img;
 
-    loadedImageData loadedImage = load_image(path);
+    loadedImageData loadedImage = STB_load_image(path);
+
+    if(!loadedImage.data)
+    {
+        throw std::runtime_error("Failed to load texture image!");
+    }
 
     // Calculate memory size of the image, 4 bytes per pixel
     VkDeviceSize imageSize = loadedImage.width * loadedImage.height * 4;
 
     // Calculate the number of mip levels based on the image dimensions
     img.mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(loadedImage.width, loadedImage.height)))) + 1;
-
-    if(!loadedImage.data)
-    {
-        throw std::runtime_error("Failed to load texture image!");
-    }
 
     memoryBuffer stagingBuffer = _core->getMemorySystem().createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
@@ -161,7 +170,51 @@ image texture_system::createTextureFromImageFile(const std::string& path, bool a
     // Add to _textures
     if(addToCache)
     {
-        addTextureToCache(path, img);
+        addTextureToCache(type, path, img);
+    }
+
+    return img;
+}
+
+image texture_system::createTexture(const loadedImageData imgData, VkFormat format, E_TextureType type,  bool addToCache)
+{
+    image img;
+
+    // Calculate memory size of the image, 4 bytes per pixel
+    VkDeviceSize imageSize = imgData.width * imgData.height * 4;
+
+    // Calculate the number of mip levels based on the image dimensions
+    img.mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(imgData.width, imgData.height)))) + 1;
+
+    memoryBuffer stagingBuffer = _core->getMemorySystem().createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    void* data;
+    vkMapMemory(_core->getLogicalDevice(), stagingBuffer.memory, 0, imageSize, 0, &data);
+    memcpy(data, imgData.data, static_cast<size_t>(imageSize));
+    vkUnmapMemory(_core->getLogicalDevice(), stagingBuffer.memory);
+
+    free_image(imgData.data);
+
+    img = createImage(imgData.width, imgData.height, img.mipLevels, format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    transitionImageLayout(img.image, format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, img.mipLevels);
+    copyBufferToImage(stagingBuffer.buffer, img.image, static_cast<uint32_t>(imgData.width), static_cast<uint32_t>(imgData.height));
+    generateMipMaps(img.image, format, imgData.width, imgData.height, img.mipLevels);
+
+    _core->getMemorySystem().freeBuffer(stagingBuffer);
+
+    // Populate the image view
+    createTextureImageView(img, format);
+
+    // Populate the descriptor image info
+    img.descriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    img.descriptor.imageView = img.imageView;
+    img.descriptor.sampler = _textureSampler;
+
+    // Add to _textures
+    if(addToCache)
+    {
+        addTextureToCache(E_TextureType::DIFFUSE, "X:/Repos/Manta/res/missingTexture.png", img);
     }
 
     return img;
@@ -172,24 +225,32 @@ VkImageView texture_system::createTextureImageView(image& img, VkFormat format)
     return createImageView(img, format, VK_IMAGE_ASPECT_COLOR_BIT, img.mipLevels);
 }
 
-std::vector<VkDescriptorImageInfo> texture_system::aggregateDescriptorImageInfos(size_t returnVectorSize) const
+std::vector<VkDescriptorImageInfo> texture_system::aggregateDescriptorTextureInfos(E_TextureType type, size_t returnVectorSize) const
 {
+    if(_textures.find(type) == _textures.end())
+    {
+        throw std::runtime_error("Texture type not found in cache");
+    }
+
+    if(_textures.at(type)->empty())
+    {
+        throw std::runtime_error("Texture cache is empty");
+    }
+
+    if(_textures.at(type)->size() > returnVectorSize)
+    {
+        throw std::runtime_error("The number of textures in cache set exceeds the maximum number of textures allowed by argument");
+    }
+
     // Get default Texture
-    std::vector<VkDescriptorImageInfo> imageInfos ;
+    std::vector<VkDescriptorImageInfo> imageInfos;
 
-    for(auto& texture : _textures)
+    for(auto& texture : *_textures.at(type))
     {
-        for(auto& img : *texture.second)
-        {
-            imageInfos.push_back(img.descriptor);
-        }
+        imageInfos.push_back(texture.descriptor);
     }
 
-    if(imageInfos.size() > returnVectorSize)
-    {
-        std::runtime_error("The number of textures in cache set exceeds the maximum number of textures allowed by argument");
-    }
-    else if (imageInfos.size() < returnVectorSize)
+    if (imageInfos.size() < returnVectorSize)
     {
         for(size_t i = imageInfos.size(); i < returnVectorSize; i++)
         {
@@ -364,15 +425,13 @@ void texture_system::cleanup()
     vkDestroySampler(_core->getLogicalDevice(), _textureSampler, nullptr);
 }
 
-void texture_system::addTextureToCache(const std::string& path, const image& img)
+void texture_system::addTextureToCache(const E_TextureType type , const std::string& path, const image& img)
 {
-    if(_textures.find(path) == _textures.end())
+    if(_textures.find(type) == _textures.end())
     {
-        _textures[path] = std::make_shared<std::vector<image>>();
+        _textures[type] = std::make_shared<std::vector<image>>();
     }
-
-    _textures[path]->push_back(img);
-
+    _textures[type]->push_back(img);
 }
 
 bool texture_system::hasStencilComponent(VkFormat format)

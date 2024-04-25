@@ -7,8 +7,9 @@
 #include <unordered_map>
 #include <memory>
 
-class rendering_system;
+#include "util/imageData.hpp"
 
+class rendering_system;
 struct externalTextureLoaderHelper
 {
     std::vector<std::string> diffusePaths;
@@ -18,7 +19,7 @@ struct externalTextureLoaderHelper
     std::vector<std::string> lightmapPaths;
 };
 
-enum class E_TexureType
+enum class E_TextureType : unsigned int
 {
     DIFFUSE,
     SPECULAR,
@@ -26,12 +27,14 @@ enum class E_TexureType
     HEIGHT,
     LIGHTMAP,
     ROUGHNESS,
-    CUBEMAP
+    CUBEMAP,
+    SIZE
 };
 
 struct image
 {
-    E_TexureType type;
+    E_TextureType type;
+    unsigned int id;
 
     VkImage image;
     VkDeviceMemory memory;
@@ -56,12 +59,13 @@ public:
 
     image createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties);
 
-    image createTextureFromImageFile(const std::string& path, bool addToCache = true);
+    image createTexture(const std::string& filePath, E_TextureType type = E_TextureType::DIFFUSE, bool addToCache = true);
+    image createTexture(const loadedImageData, VkFormat format, E_TextureType type = E_TextureType::DIFFUSE,  bool addToCache = true);
 
     VkImageView createImageView(image& img, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels);
     VkImageView createTextureImageView(image& img, VkFormat format = VK_FORMAT_R8G8B8A8_SRGB);
 
-    std::vector<VkDescriptorImageInfo> aggregateDescriptorImageInfos(size_t returnectorSize) const;
+    std::vector<VkDescriptorImageInfo> aggregateDescriptorTextureInfos(E_TextureType type,  size_t returnVectorSize) const;
 
     // Exists temporarily as some older code depends on overloading with a different signature
     VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels);
@@ -69,17 +73,19 @@ public:
     void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
     void transitionImageLayout(VkImage& image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels);
 
+    // Resource release functions
+    void cleanup();
     void cleanupImage(image& img);
 
-    void cleanup();
 private:
 
-    void addTextureToCache(const std::string& path, const image& img);
+    void addTextureToCache(const E_TextureType type, const std::string& path, const image& img);
     bool hasStencilComponent(VkFormat format);
     void generateMipMaps(VkImage& image, VkFormat format, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels);
 
     image _defaultTexture;
-    std::unordered_map<std::string, std::shared_ptr<std::vector<image>>> _textures;
+
+    std::unordered_map<E_TextureType, std::shared_ptr<std::vector<image>>> _textures;
 
     uint32_t _mipLevels = 1;                                // mip levels
     VkSampler _textureSampler;
