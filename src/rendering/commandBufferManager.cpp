@@ -133,7 +133,7 @@ void command_buffer_system::recordCommandBuffer(uint32_t frameIndex, uint32_t sw
 
     _core->getFrameManager().updateUniformBuffers(frameIndex);
 
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _core->getPipelineSystem().getPipeline("basic").layout, 0, 1, & _core->getFrameManager().getDescriptorSet(frameIndex), 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _core->getPipelineSystem().getPipeline("basic").layout, 0, 1, & _core->getFrameManager().getDescriptorSet(descriptorSetType::MVP_MATRICES, frameIndex), 0, nullptr);
 
     auto renderModels = _core->getScene()->getRegistry().view<Model>();
 
@@ -145,6 +145,7 @@ void command_buffer_system::recordCommandBuffer(uint32_t frameIndex, uint32_t sw
         // Push constants
         vkCmdPushConstants(commandBuffer, _core->getPipelineSystem().getPipeline("basic").layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(int), &i);
 
+
         for(auto& mesh : *model.meshes)
         {
             // Attribute data
@@ -152,7 +153,12 @@ void command_buffer_system::recordCommandBuffer(uint32_t frameIndex, uint32_t sw
             vkCmdBindVertexBuffers(commandBuffer, 0, 1, &mesh.vertexBuffer.buffer, offsets);
             vkCmdBindIndexBuffer(commandBuffer, mesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 
-            // Update Model Matrix
+            unsigned int textureIndex = mesh.textureIndices[static_cast<unsigned int>(E_TextureType::DIFFUSE)];
+
+            //mesh.textureIndices[static_cast<unsigned int>(E_TextureType::DIFFUSE)]
+            vkCmdPushConstants(commandBuffer, _core->getPipelineSystem().getPipeline("basic").layout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(int), 2*sizeof(int), &i);
+
+            // Draw call
             vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(mesh.indexData.size()), 1, 0, 0, 0);
         }
         i++;
