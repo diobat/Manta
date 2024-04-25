@@ -11,8 +11,8 @@
 enum class poolType : uint8_t
 {
     POOL_TYPE_BASIC,
-    POOL_TYPE_BINDLESS,
-    POOL_TYPE_UNUSED    // This one must always be the last entry, see DescriptorAllocator::resetCurrentPools()
+    POOL_TYPE_BINDLESS,     // Currently unused
+    POOL_TYPE_UNUSED        // This one must always be the last entry, see DescriptorAllocator::resetCurrentPools()
 };
 
 class DescriptorAllocator
