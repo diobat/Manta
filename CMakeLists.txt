@@ -87,6 +87,8 @@ FetchContent_Declare(
   CONFIGURE_COMMAND ""
   BUILD_COMMAND 	""
 )
+set(STB_IMAGE_BUILD_TESTS OFF)
+set(STB_IMAGE_BUILD_EXAMPLES OFF)
 FetchContent_MakeAvailable(stb)
 target_include_directories(${PROJECT_NAME} PUBLIC 
 $<BUILD_INTERFACE:${stb_SOURCE_DIR}>)
