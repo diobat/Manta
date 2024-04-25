@@ -32,7 +32,7 @@ void frame_manager::createDescriptorSets()
 
     memoryBuffers& cameraBuffers = _core->getScene()->getRegistry().get<memoryBuffers>( _core->getScene()->getActiveCamera() );
 
-    _textureArrayDescriptorSets = _core->getTextureSystem().aggregateDescriptorImageInfos(kTextureArraySize);
+    _textureArrayDescriptorSets = _core->getTextureSystem().aggregateDescriptorTextureInfos(E_TextureType::DIFFUSE , kTextureArraySize);
     VkDescriptorImageInfo& samplerDescriptor = _core->getTextureSystem().getTextureSamplerDescriptor();
 
     for(size_t i = 0; i < framesinFlight; i++)
