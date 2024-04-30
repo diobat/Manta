@@ -14,14 +14,6 @@ void texture_system::init()
 {
     initTextureSampler();
     _defaultTexture = createTexture("X:/Repos/Manta/res/missingTexture.png",E_TextureType::DIFFUSE , false);
-
-    addTextureToCache(E_TextureType::DIFFUSE, "X:/Repos/Manta/res/missingTexture.png", _defaultTexture);
-    addTextureToCache(E_TextureType::SPECULAR, "X:/Repos/Manta/res/missingTexture.png", _defaultTexture);
-    addTextureToCache(E_TextureType::NORMAL, "X:/Repos/Manta/res/missingTexture.png", _defaultTexture);
-    addTextureToCache(E_TextureType::HEIGHT, "X:/Repos/Manta/res/missingTexture.png", _defaultTexture);
-    addTextureToCache(E_TextureType::LIGHTMAP, "X:/Repos/Manta/res/missingTexture.png", _defaultTexture);
-    addTextureToCache(E_TextureType::ROUGHNESS, "X:/Repos/Manta/res/missingTexture.png", _defaultTexture);
-    addTextureToCache(E_TextureType::CUBEMAP, "X:/Repos/Manta/res/missingTexture.png", _defaultTexture);
 }
 
 void texture_system::initTextureSampler()
@@ -170,7 +162,7 @@ image texture_system::createTexture(const std::string& path, E_TextureType type,
     // Add to _textures
     if(addToCache)
     {
-        addTextureToCache(type, path, img);
+        addTextureToCache(type, img);
     }
 
     return img;
@@ -214,7 +206,7 @@ image texture_system::createTexture(const loadedImageData imgData, VkFormat form
     // Add to _textures
     if(addToCache)
     {
-        addTextureToCache(E_TextureType::DIFFUSE, "X:/Repos/Manta/res/missingTexture.png", img);
+        addTextureToCache(E_TextureType::DIFFUSE, img);
     }
 
     return img;
@@ -425,16 +417,17 @@ void texture_system::cleanup()
     vkDestroySampler(_core->getLogicalDevice(), _textureSampler, nullptr);
 }
 
-void texture_system::addTextureToCache(const E_TextureType type , const std::string& path, const image& img)
+void texture_system::addTextureToCache(const E_TextureType type , image& img)
 {
     if(_textures.find(type) == _textures.end())
     {
         _textures[type] = std::make_shared<std::vector<image>>();
     }
+    img.id = _textures[type]->size();
     _textures[type]->push_back(img);
 }
 
-bool texture_system::hasStencilComponent(VkFormat format)
+bool texture_system::hasStencilComponent(VkFormat format) const
 {
     return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 }

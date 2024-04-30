@@ -37,7 +37,7 @@ struct image
     unsigned int id;
 
     VkImage image;
-    VkDeviceMemory memory;
+    VkDeviceMemory memory = VK_NULL_HANDLE;
     VkImageView imageView = VK_NULL_HANDLE;
     VkFormat format;
     VkImageLayout layout;
@@ -79,8 +79,8 @@ public:
 
 private:
 
-    void addTextureToCache(const E_TextureType type, const std::string& path, const image& img);
-    bool hasStencilComponent(VkFormat format);
+    void addTextureToCache(const E_TextureType type, image& img);
+    bool hasStencilComponent(VkFormat format) const;
     void generateMipMaps(VkImage& image, VkFormat format, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels);
 
     image _defaultTexture;

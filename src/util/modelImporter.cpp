@@ -202,5 +202,5 @@ unsigned int ModelImporter::loadMaterialTextures(const aiScene* scene, aiMateria
         // Create the texture, and return the index
         return _meshLibrary->_core->getTextureSystem().createTexture(img, VK_FORMAT_R8G8B8A8_SRGB, _textureTypeMap[type]).id;
     }
-    return 0;
+    return -1;
 }

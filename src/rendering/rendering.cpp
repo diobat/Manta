@@ -112,7 +112,6 @@ void rendering_system::firstTimeSetup()
 {
     // Resource initialization
     _texture.init();
-    _texture.createTexture("X:/Repos/Manta/res/models/room/viking_room.png");
 
     _frames.allocateUniformBuffers(100);
     _frames.createDescriptorSets();
