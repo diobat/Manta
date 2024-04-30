@@ -156,7 +156,7 @@ void command_buffer_system::recordCommandBuffer(uint32_t frameIndex, uint32_t sw
             unsigned int textureIndex = mesh.textureIndices[static_cast<unsigned int>(E_TextureType::DIFFUSE)];
 
             //mesh.textureIndices[static_cast<unsigned int>(E_TextureType::DIFFUSE)]
-            vkCmdPushConstants(commandBuffer, _core->getPipelineSystem().getPipeline("basic").layout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(int), 2*sizeof(int), &i);
+            vkCmdPushConstants(commandBuffer, _core->getPipelineSystem().getPipeline("basic").layout, VK_SHADER_STAGE_FRAGMENT_BIT, 128, sizeof(int), &textureIndex);
 
             // Draw call
             vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(mesh.indexData.size()), 1, 0, 0, 0);
