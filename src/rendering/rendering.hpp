@@ -16,6 +16,7 @@
 #include "rendering/pipelineManager.hpp"
 #include "rendering/swapChainManager.hpp"
 #include "rendering/frameManager.hpp"
+#include "GUI/imGUIHandler.hpp"
 
 #include "rendering/descriptors/layoutCache.hpp"
 #include "rendering/descriptors/descriptorAllocator.hpp"
@@ -69,6 +70,7 @@ public:
 
     model_mesh_library& getModelMeshLibrary() { return _modelLibrary; }             // model mesh library getter
 
+    imGUI_handler& getImGUIHandler() { return _imGUI; }                             // imGUI handler getter
 
     void firstTimeSetup();
     bool firstTime = true;
@@ -118,6 +120,7 @@ private:
     Manta* _core;                                           // core
     std::shared_ptr<Scene> _scene;                          // scene
     
+    imGUI_handler _imGUI;                                   // imGUI handler
     model_mesh_library _modelLibrary;                       // model mesh library
     memory_system _memory;                                  // memory system
     command_buffer_system _commandBuffer;                   // command buffer system

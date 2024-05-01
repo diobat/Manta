@@ -48,12 +48,14 @@ public:
     void resetPools();
     bool allocate (VkDescriptorSet* set, VkDescriptorSetLayout layout, poolType type = poolType::POOL_TYPE_BASIC);
 
+    VkDescriptorPool grabPool(poolType type = poolType::POOL_TYPE_BASIC);
+
     void cleanup();
 
     VkDevice& getDevice() { return _device; }
 private:
 
-    VkDescriptorPool grabPool(poolType type = poolType::POOL_TYPE_BASIC);
+
 
     VkDescriptorPool createPool(poolType type, VkDevice device, int count, VkDescriptorPoolCreateFlags flags);
     std::vector<VkDescriptorPoolSize> getPoolSizes(poolType type);

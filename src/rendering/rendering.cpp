@@ -53,7 +53,8 @@ rendering_system::rendering_system(std::shared_ptr<Scene> scene)    :
     _pipelines(this),
     _swapChains(this, _surface),
     _modelLibrary(this), 
-    _frames(this)
+    _frames(this), 
+    _imGUI(this)
 {
     init();
 }
@@ -102,6 +103,9 @@ void rendering_system::initRender()
     createRenderPass();
     _pipelines.createPipeline("basic");
     _commandBuffer.createCommandPools();
+
+    // Init ImGUI
+    _imGUI.init(_instance, _graphicsQueue, _renderPass);
 
     _swapChains.createImageViews();
     _swapChains.createDepthResources();
@@ -401,6 +405,8 @@ void rendering_system::createInstance()
 void rendering_system::drawFrame() 
 {
     vkWaitForFences(_device, 1 , &_inFlightFences[_currentFrame], VK_TRUE, std::numeric_limits<uint64_t>::max());
+
+
 
     // Acquire image from swap chain
     uint32_t imageIndex = _swapChains.getNextImageIndex(_imageAvailableSemaphores[_currentFrame], VK_NULL_HANDLE);

@@ -14,15 +14,6 @@ file(GLOB_RECURSE SOURCE_FILES
   ${CMAKE_SOURCE_DIR}/src/*.cpp
 )
 
-# # Add header files
-# file(GLOB_RECURSE HEADER_FILES 
-#   ${CMAKE_SOURCE_DIR}/src/*.hpp
-# )
-
-
-message(STATUS "Source files: ${SOURCE_FILES}")
-message(STATUS "Header files: ${HEADER_FILES}")
-
 # Add executable
 add_executable(${PROJECT_NAME} ${SOURCE_FILES} ${HEADER_FILES})
 
@@ -132,6 +123,24 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(spirv_cross)
 target_link_libraries(${PROJECT_NAME} PUBLIC spirv-cross-core spirv-cross-glsl spirv-cross-hlsl spirv-cross-msl spirv-cross-reflect spirv-cross-util)
+
+######################################## imGUI
+
+# imGUI has no CMakeLists.txt, so we need to manually add the source files
+file(GLOB IMGUI_SOURCE_FILES 
+    ${CMAKE_SOURCE_DIR}/deps/imgui/*.cpp
+    ${CMAKE_SOURCE_DIR}/deps/imgui/backends/imgui_impl_glfw.cpp
+    ${CMAKE_SOURCE_DIR}/deps/imgui/backends/imgui_impl_vulkan.cpp
+)
+
+add_library(imgui STATIC ${IMGUI_SOURCE_FILES})
+target_include_directories(imgui PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/deps/imgui>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/deps/imgui/backends>
+)
+
+target_link_libraries(imgui PUBLIC glfw Vulkan::Vulkan)
+target_link_libraries(${PROJECT_NAME} PUBLIC imgui)
 
 ######################################## Vulkan
 find_package(Vulkan REQUIRED)

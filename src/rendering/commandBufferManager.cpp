@@ -99,6 +99,9 @@ void command_buffer_system::recordCommandBuffer(uint32_t frameIndex, uint32_t sw
         throw std::runtime_error("failed to begin recording command buffer!");
     }
 
+    // Signal frame Start to imGUI
+    _core->getImGUIHandler().onFrameStart();
+
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderPassInfo.renderPass = _core->getRenderPass();
@@ -163,6 +166,9 @@ void command_buffer_system::recordCommandBuffer(uint32_t frameIndex, uint32_t sw
         }
         i++;
     }
+
+    // Signal frame End to imGUI
+    _core->getImGUIHandler().onFrameEnd(frameIndex);
 
     vkCmdEndRenderPass(commandBuffer);
 

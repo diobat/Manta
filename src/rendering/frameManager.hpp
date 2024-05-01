@@ -44,8 +44,9 @@ public:
     void updateUniformBuffers(uint32_t currentImage);
 
     memoryBuffers& getMemoryBuffer(descriptorSetType type);
-    // memoryBuffers& getModelMatrices();
     VkDescriptorSet& getDescriptorSet(descriptorSetType type, uint32_t index);
+
+    std::unique_ptr<DescriptorAllocator>& getDescriptorAllocator() { return _descriptorAllocator; }
 
     void cleanup();
 
