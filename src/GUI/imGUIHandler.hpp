@@ -21,6 +21,8 @@ public:
     
     void init(VkInstance& instance, VkQueue& graphicsQueue, VkRenderPass& renderPass);
 
+    void createUI();
+
     void onFrameStart();
     void onFrameEnd(uint32_t frameIndex);
 
@@ -28,6 +30,14 @@ public:
 
 private:
 
+    void createSceneCollapsible();
+    void createCameraCollapsible();
+    void createPerformanceCollapsible();
+
+    int _ndp = 2;           // Number of decimal places to display in the UI
+    bool _showGUI = true;   // Keep track of whether the GUI is collapsed or not
+
+    VkDescriptorPool _descriptorPool;
     rendering_system* _core;
     ImGuiContext* _context;
 };

@@ -16,15 +16,19 @@ entt::entity model_mesh_library::createModel(entt::registry& registry, const std
     entt::entity modelEntity = _core->getScene()->newEntity();
     std::string absolutePath = ROOT_DIR + path; 
 
-    // If the model is already loaded, do not load it again
+    std::string name = absolutePath.substr(absolutePath.find_last_of('/') + 1);
+    name = name.substr(0, name.find_last_of('.'));     // Remove the file extension
+
+    // If the meshes are already loaded, do not load them again
     if(_loadedModelPaths.find(absolutePath) == _loadedModelPaths.end())
     {
-        registry.emplace<Model>(modelEntity, _factory.importFromFile(absolutePath));
+        Model& newModel = registry.emplace<Model>(modelEntity, _factory.importFromFile(absolutePath));
+        newModel.name = name;
         _loadedModelPaths.insert(absolutePath);
     }
     else
     {
-        registry.emplace<Model>(modelEntity, Model{absolutePath, getMeshes(absolutePath)});
+        registry.emplace<Model>(modelEntity, Model{absolutePath, getMeshes(absolutePath), name});
     }
 
     return modelEntity;

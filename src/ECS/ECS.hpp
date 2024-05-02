@@ -2,9 +2,10 @@
 
 #include <entt/entt.hpp>
 
+#include <vector>
+#include <string>
+
 class Manta;
-
-
 
 class Scene
 {
@@ -18,6 +19,7 @@ public:
 
     // Model functions
     entt::entity addModel(const std::string& path, const std::array<float, 3>& position = {0.0f, 0.0f, 0.0f}, const std::array<float, 3>& rotation = {0.0f, 0.0f, 0.0f}, const std::array<float, 3>& scale = {1.0f, 1.0f, 1.0f});
+    std::vector<std::string> getAllModelNames() const;
 
     // Camera functions
     entt::entity addCamera();

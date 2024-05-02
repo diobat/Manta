@@ -57,6 +57,19 @@ entt::entity Scene::addModel(const std::string& path, const std::array<float, 3>
     return model;
 }
 
+std::vector<std::string> Scene::getAllModelNames() const
+{
+    std::vector<std::string> names;
+
+    auto view = _registry.view<Model>();
+
+    for(auto entity : view)
+    {
+        names.push_back(_registry.get<Model>(entity).name);
+    }
+
+    return names;
+}
 
 // Camera
 

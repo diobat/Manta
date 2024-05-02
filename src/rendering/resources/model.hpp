@@ -30,11 +30,8 @@ struct Model
 
     std::shared_ptr<std::vector<Mesh>> meshes = nullptr;
 
+    std::string name;
+
     glm::mat4 modelMatrix = glm::mat4(1.0f);
-    
-    void operator=(const Model& other) {
-        path = other.path;
-        meshes = other.meshes;
-    }
 };	
 

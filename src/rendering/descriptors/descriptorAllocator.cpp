@@ -44,7 +44,7 @@ VkDescriptorPool DescriptorAllocator::grabPool(poolType type)
     else
     {
         // Create a new pool
-        VkDescriptorPoolCreateFlags flags = 0;
+        VkDescriptorPoolCreateFlags flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
         if (type == poolType::POOL_TYPE_BINDLESS)
         {

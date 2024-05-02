@@ -468,8 +468,9 @@ void rendering_system::drawFrame()
 void rendering_system::cleanup() 
 {
     vkDeviceWaitIdle(_device);
-    _swapChains.cleanup();
 
+    _imGUI.cleanup();
+    _swapChains.cleanup();
     _texture.cleanup();
 
     // Free uniform buffers
