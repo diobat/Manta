@@ -133,8 +133,6 @@ private:
     // Runtime Variables
     std::vector<VkDescriptorSet> _descriptorSets;           // descriptor sets
 
-    image _depthImage;                                      // depth image
-
     // Initialization variables
     GLFWwindow* _window;                                    // glfw window
     VkInstance _instance;                                   // vulkan instance
