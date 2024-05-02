@@ -68,9 +68,10 @@ memoryBuffers& frame_manager::getMemoryBuffer(descriptorSetType type)
         case descriptorSetType::MVP_MATRICES:
             return _bufferDescriptorSets.buffer;
             break;
+        default:
+            throw std::runtime_error("Invalid descriptor set type");
+            break;
     }
-
-    std::runtime_error("Invalid descriptor set type");
 }
 
 VkDescriptorSet& frame_manager::getDescriptorSet(descriptorSetType type,  uint32_t index)
@@ -80,9 +81,10 @@ VkDescriptorSet& frame_manager::getDescriptorSet(descriptorSetType type,  uint32
         case descriptorSetType::MVP_MATRICES:
             return _bufferDescriptorSets.descriptorSets[index];
             break;
+        default:
+            throw std::runtime_error("Invalid descriptor set type");
+            break;
     }
-
-    std::runtime_error("Invalid descriptor set type");
 }
 
 void frame_manager::cleanup()
