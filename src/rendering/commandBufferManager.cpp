@@ -104,7 +104,7 @@ void command_buffer_system::recordCommandBuffer(uint32_t frameIndex, uint32_t sw
 
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassInfo.renderPass = _core->getRenderPass();
+    renderPassInfo.renderPass = _core->getPipelineSystem().getRenderPass();
     renderPassInfo.framebuffer = _core->getSwapChainSystem().getSwapChain().Framebuffers[swapChainImageIndex];
     renderPassInfo.renderArea.offset = {0, 0};
     renderPassInfo.renderArea.extent = _core->getSwapChainSystem().getSwapChain().Extent;

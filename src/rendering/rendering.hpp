@@ -75,7 +75,6 @@ public:
     void firstTimeSetup();
     bool firstTime = true;
 
-    VkRenderPass getRenderPass() { return _renderPass; }
 private:
     // Initialization
     void init();
@@ -99,9 +98,6 @@ private:
                 bool checkDeviceExtensionSupport(VkPhysicalDevice device);
                 SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);\
         void createLogicalDevice();
-
-        // Rendering setup
-        void createRenderPass();
 
         // Resource setup
         void createTextureSampler();
@@ -130,9 +126,6 @@ private:
     swap_chain_system _swapChains;                          // swap chain system
     frame_manager _frames;                                  // frame manager
 
-    // Runtime Variables
-    std::vector<VkDescriptorSet> _descriptorSets;           // descriptor sets
-
     // Initialization variables
     GLFWwindow* _window;                                    // glfw window
     VkInstance _instance;                                   // vulkan instance
@@ -145,7 +138,6 @@ private:
     VkQueue _transferQueue;                                 // transfer queue
     VkQueue _presentationQueue;                             // presentation queue
 
-    VkRenderPass _renderPass;                               // render pass
     VkSurfaceKHR _surface;                                  // surface
 
     std::vector<VkSemaphore> _imageAvailableSemaphores;     // image available semaphore
