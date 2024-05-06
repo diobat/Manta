@@ -21,8 +21,12 @@ void pipeline_system::init()
     initializeRenderPasses();
 }
 
-void pipeline_system::createPipeline(std::string shaderProgramName)
+void pipeline_system::createPipeline(std::string shaderProgramName, E_RenderPassType renderPassType)
 {
+    if(renderPassType == E_RenderPassType::SIZE)
+    {
+        throw std::runtime_error("Invalid render pass type");
+    }
 
     shader_system& shaderManager = _core->getShaderSystem();
     auto shaderProgram = shaderManager.getShaderProgram(shaderProgramName);
@@ -42,7 +46,7 @@ void pipeline_system::createPipeline(std::string shaderProgramName)
     pipelineInfo.pColorBlendState = &createColorBlendingInfo();
     pipelineInfo.pDynamicState = &createDynamicStateInfo(); // Optional
     pipelineInfo.layout = generatePipelineLayout(shaderProgram);
-    pipelineInfo.renderPass = _renderPass;
+    pipelineInfo.renderPass = _renderPass[renderPassType];
     pipelineInfo.subpass = 0;
 
     shaderPipeline shaderPipeline;
@@ -70,7 +74,11 @@ void pipeline_system::cleanup()
     }
 
     vkDestroyPipelineLayout(_core->getLogicalDevice(), _pipelineLayout, nullptr);
-    vkDestroyRenderPass(_core->getLogicalDevice(), _renderPass, nullptr);
+
+    for(auto& renderPass : _renderPass)
+    {
+        vkDestroyRenderPass(_core->getLogicalDevice(), renderPass.second, nullptr);
+    }
 }
 
 shaderPipeline& pipeline_system::getPipeline(std::string name)
@@ -406,7 +414,9 @@ VkPipelineLayout pipeline_system::createPipelineLayout(const std::vector<VkDescr
 
 void pipeline_system::initializeRenderPasses()
 {
-        // Color attachment
+    // Standard renderpass
+    	
+    // Color attachment
     VkAttachmentDescription colorAttachment{};
     colorAttachment.format = _core->getSwapChainSystem().getSwapChain().ImageFormat;
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -458,8 +468,58 @@ void pipeline_system::initializeRenderPasses()
     renderPassInfo.dependencyCount = 1;
     renderPassInfo.pDependencies = &dependency;
 
-    if(vkCreateRenderPass(_core->getLogicalDevice(), &renderPassInfo, nullptr, &_renderPass) != VK_SUCCESS)
+    VkRenderPass renderPass;
+
+    if(vkCreateRenderPass(_core->getLogicalDevice(), &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS)
     {
         throw std::runtime_error("failed to create render pass!");
     }
+
+    _renderPass[E_RenderPassType::COLOR_DEPTH] = renderPass;
+
+    // Cube map renderpass
+
+    VkAttachmentDescription colorAttachmentCube{};
+    colorAttachmentCube.format = VK_FORMAT_R8G8B8A8_SRGB;
+    colorAttachmentCube.samples = VK_SAMPLE_COUNT_1_BIT;
+    colorAttachmentCube.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    colorAttachmentCube.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    colorAttachmentCube.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    colorAttachmentCube.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    VkAttachmentReference colorAttachmentRefCube{};
+    colorAttachmentRefCube.attachment = 0;
+    colorAttachmentRefCube.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpassCube{};
+    subpassCube.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpassCube.colorAttachmentCount = 1;
+    subpassCube.pColorAttachments = &colorAttachmentRefCube;
+
+    VkSubpassDependency dependencyCube{};
+    dependencyCube.srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependencyCube.dstSubpass = 0;
+    dependencyCube.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependencyCube.srcAccessMask = 0;
+    dependencyCube.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependencyCube.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+    std::array<VkAttachmentDescription, 1> attachmentsCube = {colorAttachmentCube};
+    VkRenderPassCreateInfo renderPassInfoCube{};
+    renderPassInfoCube.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassInfoCube.attachmentCount = static_cast<uint32_t>(attachmentsCube.size());
+    renderPassInfoCube.pAttachments = attachmentsCube.data();
+    renderPassInfoCube.subpassCount = 1;
+    renderPassInfoCube.pSubpasses = &subpassCube;
+    renderPassInfoCube.dependencyCount = 1;
+    renderPassInfoCube.pDependencies = &dependencyCube;
+
+    VkRenderPass _renderPassCube;
+
+    if(vkCreateRenderPass(_core->getLogicalDevice(), &renderPassInfoCube, nullptr, &renderPass) != VK_SUCCESS)
+    {
+        throw std::runtime_error("failed to create render pass!");
+    }
+
+    _renderPass[E_RenderPassType::CUBE_MAP] = renderPass;
 }
