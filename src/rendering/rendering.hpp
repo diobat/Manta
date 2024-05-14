@@ -17,6 +17,7 @@
 #include "rendering/swapChainManager.hpp"
 #include "rendering/frameManager.hpp"
 #include "GUI/imGUIHandler.hpp"
+#include "rendering/strategy/SChain.hpp"
 
 #include "rendering/descriptors/layoutCache.hpp"
 #include "rendering/descriptors/descriptorAllocator.hpp"
@@ -96,7 +97,7 @@ private:
         void pickPhysicalDevice();
             bool isDeviceSuitable(VkPhysicalDevice device);
                 bool checkDeviceExtensionSupport(VkPhysicalDevice device);
-                SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);\
+                SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
         void createLogicalDevice();
 
         // Resource setup
@@ -116,6 +117,7 @@ private:
     Manta* _core;                                           // core
     std::shared_ptr<Scene> _scene;                          // scene
     
+    std::shared_ptr<StrategyChain> _strategyChain;                           // strategy chain
     imGUI_handler _imGUI;                                   // imGUI handler
     model_mesh_library _modelLibrary;                       // model mesh library
     memory_system _memory;                                  // memory system
