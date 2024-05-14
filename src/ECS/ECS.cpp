@@ -6,6 +6,8 @@
 #include "rendering/resources/memory.hpp"
 #include "ECS/components/spatial.hpp"
 #include "ECS/components/camera.hpp"
+#include "ECS/components/skybox.hpp"
+
 #include "core/settings.hpp"
 
 Scene::Scene(Manta* core, entt::registry& registry) : 
@@ -108,4 +110,37 @@ void Scene::moveActiveCamera(unsigned int direction)
 {
     auto camera = getActiveCamera();
     moveCamera(_registry, camera, static_cast<relativeDirections>(direction));
+}
+
+// Skybox
+
+entt::entity Scene::addSkybox(const std::string& path, bool setActive)
+{
+    entt::entity skybox = newEntity();
+
+    _registry.emplace<Skybox>(skybox) = createSkybox(_core->getRendering().lock(), path);
+
+    if(setActive)
+    {
+        setActiveSkybox(skybox);
+    }
+
+    return skybox;
+}
+
+void Scene::setActiveSkybox(const entt::entity& skybox)
+{
+    auto view = _registry.view<Skybox>();
+
+    for(auto entity : view)
+    {
+        if(entity == skybox)
+        {
+            _registry.get<Skybox>(entity).active = true;
+        }
+        else
+        {
+            _registry.get<Skybox>(entity).active = false;
+        }
+    }
 }

@@ -27,6 +27,10 @@ public:
     entt::entity getActiveCamera() const;
     void moveActiveCamera(unsigned int direction);
 
+    // Skybox functions
+    entt::entity addSkybox(const std::string& path, bool setActive = false);
+    void setActiveSkybox(const entt::entity& skybox);
+
 private:
 
     Manta* _core;

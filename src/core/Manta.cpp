@@ -74,3 +74,9 @@ void Manta::loadModel(
 {
     m_scene->addModel(path, position, rotation, scale);
 }
+
+void Manta::loadSkybox(const std::string& path, bool setAsActive)
+{
+    m_scene->addSkybox(path, setAsActive);
+}
+
