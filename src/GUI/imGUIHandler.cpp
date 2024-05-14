@@ -1,5 +1,6 @@
 #include "GUI/imGUIHandler.hpp"
 #include "rendering/rendering.hpp"
+#include "rendering/swapChainManager.hpp"
 
 #include "ECS/components/spatial.hpp"
 #include "ECS/components/camera.hpp"
@@ -145,17 +146,15 @@ void imGUI_handler::createPerformanceCollapsible()
     }
 }
 
-
 void imGUI_handler::onFrameEnd(uint32_t frameIndex)
 {
     ImGui::Render();
     ImDrawData* draw_data = ImGui::GetDrawData();
 
+    VkCommandBuffer command_buffer = _core->getSwapChainSystem().getCommandBuffer(frameIndex);
 
-    VkCommandBuffer command_buffer = _core->getCommandBufferSystem().getCommandBuffer(frameIndex);
-
+    // Render GUI
     ImGui_ImplVulkan_RenderDrawData(draw_data, command_buffer);
-
 }
 
 void imGUI_handler::cleanup()
