@@ -33,18 +33,15 @@ uint32_t swap_chain_system::getNextImageIndex()
     // Reset Command Buffer
     _core->getCommandBufferSystem().resetCommandBuffer(_swapChain.commandBuffers[_swapChain.currentFrame]);
 
-    // if(result == VK_ERROR_OUT_OF_DATE_KHR)
-    // {
-    //     recreate();
-    //     return getNextImageIndex();
-    // }
-    // else if(result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
-    // {
-    //     throw std::runtime_error("Failed to acquire swap chain image!");
-    // }
-
-    // // Signal frame Start to imGUI
-    // _core->getImGUIHandler().onFrameStart();
+    if(result == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        recreate();
+        return getNextImageIndex();
+    }
+    else if(result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+    {
+        throw std::runtime_error("Failed to acquire swap chain image!");
+    }
 
     // Set aside return value
     uint32_t fetchedFrameNumber = _swapChain.currentFrame;
@@ -143,9 +140,6 @@ bool swap_chain_system::createSwapChain()
 
     _swapChain.ImageIndices.resize(imageCount);
     _swapChain.commandBuffers = std::vector<VkCommandBuffer>(imageCount, VK_NULL_HANDLE) ;       // Need to initialize these buffers
-    // _swapChain.inFlightFences = std::vector<VkFence>(imageCount, VK_NULL_HANDLE);     // Need to initialize these fences
-    // _swapChain.imageAvailableSemaphores = std::vector<VkSemaphore>(imageCount, VK_NULL_HANDLE);     // Need to initialize these semaphores
-    // _swapChain.renderFinishedSemaphores = std::vector<VkSemaphore>(imageCount, VK_NULL_HANDLE);     // Need to initialize these semaphores
 
     return true;
 }
