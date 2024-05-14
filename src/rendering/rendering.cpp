@@ -47,11 +47,11 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
 rendering_system::rendering_system(std::shared_ptr<Scene> scene)    :
     _scene(scene),
     _memory(this, scene->getRegistry(), _device),
-    _commandBuffer(this, _graphicsQueue),
+    _commandBuffer(this, _graphicsQueue, _presentationQueue),
     _texture(this),
     _shaders(this), 
     _pipelines(this),
-    _swapChains(this, _surface),
+    _swapChains(this, _surface, _presentationQueue),
     _modelLibrary(this), 
     _frames(this), 
     _imGUI(this)
@@ -105,23 +105,29 @@ void rendering_system::initRender()
     _commandBuffer.createCommandPools();
 
     // Init ImGUI
-    _imGUI.init(_instance, _graphicsQueue, _pipelines.getRenderPass());
+    _imGUI.init(_instance, _graphicsQueue, _pipelines.getRenderPass(E_RenderPassType::COLOR_DEPTH));
 
     _swapChains.createImageViews();
     _swapChains.createDepthResources();
     _swapChains.createFramebuffers();
+    _swapChains.createCommandBuffers();
+    _swapChains.createSyncObjects();
+
+    _strategyChain = std::make_shared<PBSShadingStrategyChain>(this);    
+
+    // Resource initialization
+    _texture.init();
 
 }
 
 void rendering_system::firstTimeSetup()
 {
-    // Resource initialization
-    _texture.init();
+
 
     _frames.allocateUniformBuffers(100);
     _frames.createDescriptorSets();
-    _commandBuffer.createCommandBuffers();
-    createSyncObjects();
+    // _commandBuffer.createCommandBuffers();
+    //createSyncObjects();
 }
 
 void rendering_system::createTextureSampler()
@@ -150,32 +156,6 @@ void rendering_system::createTextureSampler()
 
     if(vkCreateSampler(_device, &samplerInfo, nullptr, &_texture.getTextureSampler()) != VK_SUCCESS){
         throw std::runtime_error("failed to create texture sampler!");
-    }
-}
-
-void rendering_system::createSyncObjects()
-{
-    unsigned int framesinFlight = getSettingsData(_scene->getRegistry()).framesInFlight;
-
-    _imageAvailableSemaphores.resize(framesinFlight);
-    _renderFinishedSemaphores.resize(framesinFlight);
-    _inFlightFences.resize(framesinFlight);
-    
-    VkSemaphoreCreateInfo semaphoreInfo{};
-    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-    VkFenceCreateInfo fenceInfo{};
-    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-    for(size_t i(0); i < framesinFlight; ++i)
-    {
-        if(vkCreateSemaphore(_device, &semaphoreInfo, nullptr, &_imageAvailableSemaphores[i]) != VK_SUCCESS ||
-            vkCreateSemaphore(_device, &semaphoreInfo, nullptr, &_renderFinishedSemaphores[i]) != VK_SUCCESS ||
-            vkCreateFence(_device, &fenceInfo, nullptr, &_inFlightFences[i]) != VK_SUCCESS)
-        {
-            throw std::runtime_error("failed to create synchronization objects for a frame!");
-        }
     }
 }
 
@@ -345,65 +325,7 @@ void rendering_system::createInstance()
 
 void rendering_system::drawFrame() 
 {
-    vkWaitForFences(_device, 1 , &_inFlightFences[_currentFrame], VK_TRUE, std::numeric_limits<uint64_t>::max());
-
-
-
-    // Acquire image from swap chain
-    uint32_t imageIndex = _swapChains.getNextImageIndex(_imageAvailableSemaphores[_currentFrame], VK_NULL_HANDLE);
-
-    // Check if a previous frame is using this image (i.e. there is its fence to wait on)
-    vkResetFences(_device, 1, &_inFlightFences[_currentFrame]);
-    _commandBuffer.resetCommandBuffer(_currentFrame);
-
-    // Begin recording command buffer
-    _commandBuffer.recordCommandBuffer(_currentFrame, imageIndex);
-
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-    VkSemaphore waitSemaphores[] = {_imageAvailableSemaphores[_currentFrame]};
-    VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-    submitInfo.waitSemaphoreCount = 1;
-    submitInfo.pWaitSemaphores = waitSemaphores;
-    submitInfo.pWaitDstStageMask = waitStages;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &_commandBuffer.getCommandBuffer(_currentFrame);
-
-    VkSemaphore signalSemaphores[] = {_renderFinishedSemaphores[_currentFrame]};
-    submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = signalSemaphores;
-
-    if(vkQueueSubmit(_graphicsQueue, 1, &submitInfo, _inFlightFences[_currentFrame]) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to submit draw command buffer!");
-    }
-
-    VkPresentInfoKHR presentInfo{};
-    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-
-    presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = signalSemaphores;
-
-    VkSwapchainKHR swapChains[] = {_swapChains.getSwapChain().swapChain};
-    presentInfo.swapchainCount = 1;
-    presentInfo.pSwapchains = swapChains;
-    presentInfo.pImageIndices = &imageIndex;
-    presentInfo.pResults = nullptr;
-
-    VkResult result = vkQueuePresentKHR(_presentationQueue, &presentInfo);
-
-    if(result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || _framebufferResized)
-    {
-        _framebufferResized = false;
-        _swapChains.recreate();
-    }
-    else if(result != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to present swap chain image!");
-    }
-
-    _currentFrame = (_currentFrame + 1) % getSettingsData(_scene->getRegistry()).framesInFlight;
+    _strategyChain->run();
 }
 
 void rendering_system::cleanup() 
@@ -426,12 +348,6 @@ void rendering_system::cleanup()
             memoryBuffers& buffers = view.get<memoryBuffers>(entity);
             _memory.freeBuffer(buffers.buffers[i]);
         }
-    }
-
-    for(size_t i(0); i < framesinFlight; ++i) {
-        vkDestroySemaphore(_device, _imageAvailableSemaphores[i], nullptr);
-        vkDestroySemaphore(_device, _renderFinishedSemaphores[i], nullptr);
-        vkDestroyFence(_device, _inFlightFences[i], nullptr);
     }
 
     _commandBuffer.cleanup();

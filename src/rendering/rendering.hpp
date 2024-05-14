@@ -34,7 +34,6 @@ VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMes
 void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
 
 struct QueueFamilyIndices;
-
 struct SwapChainSupportDetails;
 
 class rendering_system {
@@ -117,7 +116,7 @@ private:
     Manta* _core;                                           // core
     std::shared_ptr<Scene> _scene;                          // scene
     
-    std::shared_ptr<StrategyChain> _strategyChain;                           // strategy chain
+    std::shared_ptr<StrategyChain> _strategyChain;          // strategy chain
     imGUI_handler _imGUI;                                   // imGUI handler
     model_mesh_library _modelLibrary;                       // model mesh library
     memory_system _memory;                                  // memory system
@@ -141,11 +140,6 @@ private:
     VkQueue _presentationQueue;                             // presentation queue
 
     VkSurfaceKHR _surface;                                  // surface
-
-    std::vector<VkSemaphore> _imageAvailableSemaphores;     // image available semaphore
-    std::vector<VkSemaphore> _renderFinishedSemaphores;     // render finished semaphore
-    std::vector<VkFence> _inFlightFences;                   // in flight fence
-    uint32_t _currentFrame = 0;                             // current frame
 
     bool _framebufferResized = false;                       // framebuffer resized flag
 };
