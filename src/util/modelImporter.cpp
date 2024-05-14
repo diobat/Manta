@@ -6,7 +6,7 @@
 // Assimp includes
 #include <assimp/postprocess.h>
 
-
+////////////////// Importing from a model file //////////////////
 
 ModelImporter::ModelImporter(model_mesh_library* core) :
     _meshLibrary(core)
@@ -203,4 +203,28 @@ unsigned int ModelImporter::loadMaterialTextures(const aiScene* scene, aiMateria
         return _meshLibrary->_core->getTextureSystem().createTexture(img, VK_FORMAT_R8G8B8A8_SRGB, _textureTypeMap[type]).id;
     }
     return -1;
+}
+
+
+////////////////// Importing from vertex data //////////////////
+
+Model ModelImporter::importFromMeshData(const std::string& name, const Mesh& meshData, glm::mat4 modelMatrix)
+{
+    Mesh importedMesh;
+
+    importedMesh.vertexData = meshData.vertexData;
+    importedMesh.vertexBuffer = _meshLibrary->_core->getMemorySystem().createVertexBuffer(importedMesh.vertexData);
+    importedMesh.indexData = meshData.indexData;
+    importedMesh.indexBuffer = _meshLibrary->_core->getMemorySystem().createIndexBuffer(importedMesh.indexData);
+    importedMesh.textureIndices = meshData.textureIndices;
+    importedMesh.path = name;
+
+    if(_meshLibrary->_meshes.find(name) == _meshLibrary->_meshes.end())
+    {
+        _meshLibrary->_meshes[name] = std::make_shared<std::vector<Mesh>>();
+    }
+
+    _meshLibrary->_meshes[name]->push_back(importedMesh);
+
+    return Model{name, _meshLibrary->getMeshes(name), name, modelMatrix};
 }

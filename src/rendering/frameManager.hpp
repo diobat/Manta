@@ -46,6 +46,8 @@ public:
     memoryBuffers& getMemoryBuffer(descriptorSetType type);
     VkDescriptorSet& getDescriptorSet(descriptorSetType type, uint32_t index);
 
+    DescriptorBuilder getReadyDescriptorBuilder();
+
     std::unique_ptr<DescriptorAllocator>& getDescriptorAllocator() { return _descriptorAllocator; }
 
     void cleanup();
@@ -61,6 +63,8 @@ private:
 
     // Image descriptor sets
     std::vector<VkDescriptorImageInfo> _textureArrayDescriptorSets;
+
+    std::unique_ptr<DescriptorBuilder> _descriptorBuilder;
 
     std::unique_ptr<DescriptorLayoutCache> _descriptorLayoutCache;
     std::unique_ptr<DescriptorAllocator> _descriptorAllocator;

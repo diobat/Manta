@@ -11,14 +11,13 @@
 #include "rendering/resources/texture.hpp"
 #include "rendering/resources/model.hpp"
 
-struct loadedImageData;
-
 class model_mesh_library;
 
 class ModelImporter{
 public:
     ModelImporter(model_mesh_library* meshLibrary);
     Model importFromFile(const std::string& absolutePath);
+    Model importFromMeshData(const std::string& name, const Mesh& meshData,  glm::mat4 modelMatrix = glm::mat4(1.0f));
 
 private: 
     // Get data from the assimp struct
@@ -29,7 +28,6 @@ private:
     unsigned int loadMaterialTextures(const aiScene* scene, aiMaterial* mat, aiTextureType type);
 
     // STB calls
-    
     void processNode(const aiScene* scene, aiNode* node, const std::string& absolutePath);
     Mesh processMesh(const aiMesh* assimpMesh, const aiScene* scene, const std::string& absolutePath);
 

@@ -22,6 +22,8 @@ public:
     model_mesh_library(rendering_system* core);
 
     entt::entity createModel(entt::registry& registry, const std::string& path);
+    entt::entity createModelFromMesh(entt::registry& registry, const std::string& name, const Mesh& meshData);
+    Model createModelFromMesh(const std::string& name, const Mesh& meshData);
 
     std::shared_ptr<std::vector<Mesh>> getMeshes(const std::string& path);
     bool isLoaded(const std::string& path) const;

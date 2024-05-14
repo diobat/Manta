@@ -34,6 +34,42 @@ entt::entity model_mesh_library::createModel(entt::registry& registry, const std
     return modelEntity;
 }
 
+entt::entity model_mesh_library::createModelFromMesh(entt::registry& registry, const std::string& name, const Mesh& meshData )
+{
+    entt::entity modelEntity = _core->getScene()->newEntity();
+
+    if(_loadedModelPaths.find(name) == _loadedModelPaths.end())
+    {
+        _meshes[name] = std::make_shared<std::vector<Mesh>>();
+        Model& newModel = registry.emplace<Model>(modelEntity, _factory.importFromMeshData(name, meshData));
+        _loadedModelPaths.insert(name);
+    }
+    else
+    {
+        registry.emplace<Model>(modelEntity, Model{name, getMeshes(name), name});
+    }
+
+    return modelEntity;
+}
+
+ Model model_mesh_library::createModelFromMesh(const std::string& name, const Mesh& meshData )
+{
+    Model result;
+
+    if(_loadedModelPaths.find(name) == _loadedModelPaths.end())
+    {
+        _meshes[name] = std::make_shared<std::vector<Mesh>>();
+        result = _factory.importFromMeshData(name, meshData);
+        _loadedModelPaths.insert(name);
+    }
+    else
+    {
+        result = Model{name, getMeshes(name), name};
+    }
+    
+    return result;
+}
+
 void model_mesh_library::cleanup()
 {
     for(auto& mesh : _meshes)

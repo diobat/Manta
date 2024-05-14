@@ -17,6 +17,7 @@ void frame_manager::initDescriptorBuilder()
 {
     _descriptorLayoutCache = std::make_unique<DescriptorLayoutCache>(_core->getLogicalDevice());
     _descriptorAllocator = std::make_unique<DescriptorAllocator>(_core->getLogicalDevice());
+    _descriptorBuilder = std::make_unique<DescriptorBuilder>();
 }
 
 void frame_manager::createDescriptorSets()
@@ -85,6 +86,11 @@ VkDescriptorSet& frame_manager::getDescriptorSet(descriptorSetType type,  uint32
             throw std::runtime_error("Invalid descriptor set type");
             break;
     }
+}
+
+DescriptorBuilder frame_manager::getReadyDescriptorBuilder()
+{
+    return _descriptorBuilder->begin(_descriptorLayoutCache.get(), _descriptorAllocator.get());
 }
 
 void frame_manager::cleanup()
