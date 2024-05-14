@@ -2,7 +2,7 @@
 
 void initializeSettingsData(entt::registry& registry)
 {
-    settingsData data = {true, 1920, 1080, 2};
+    settingsData data = {true, 3640, 2000, 2};
 
     settingsEntity = registry.create();
     registry.emplace<settingsData>(settingsEntity, data);
