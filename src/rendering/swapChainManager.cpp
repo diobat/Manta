@@ -2,32 +2,82 @@
 
 #include "rendering/rendering.hpp"
 #include "util/physicalDeviceHelper.hpp"
+#include "core/settings.hpp"
 
 #include <set>
 
-swap_chain_system::swap_chain_system(rendering_system* core, VkSurfaceKHR& surface) :
+swap_chain_system::swap_chain_system(rendering_system* core, VkSurfaceKHR& surface, VkQueue& presentationQueue) :
     _core(core), 
-    _surface(surface)
+    _surface(surface),
+    _presentationQueue(presentationQueue)
 {
     ;
 }
 
-uint32_t swap_chain_system::getNextImageIndex(VkSemaphore semaphore, VkFence fence)
+uint32_t swap_chain_system::getNextImageIndex()
 {
-    uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(_core->getLogicalDevice(), _swapChain.swapChain, UINT64_MAX, semaphore, fence, &imageIndex);
+    // Check if a previous frame is using this image (i.e. there is its fence to wait on)
+    VkResult initialState = vkWaitForFences(_core->getLogicalDevice(), 1 , &_swapChain.inFlightFences[_swapChain.currentFrame], VK_TRUE, std::numeric_limits<uint64_t>::max());
+    // Reset the signalled fence
+    vkResetFences(_core->getLogicalDevice(), 1, &_swapChain.inFlightFences[_swapChain.currentFrame]);
 
-    if(result == VK_ERROR_OUT_OF_DATE_KHR)
+    // Aquire the next image from the swap chain extension
+    VkResult result = vkAcquireNextImageKHR(
+        _core->getLogicalDevice(),
+        _swapChain.swapChain,
+        UINT64_MAX,
+        _swapChain.imageAvailableSemaphores[_swapChain.currentFrame],
+        _swapChain.inFlightFences[_swapChain.currentFrame],
+        &_swapChain.ImageIndices[_swapChain.currentFrame]);
+
+    // Reset Command Buffer
+    _core->getCommandBufferSystem().resetCommandBuffer(_swapChain.commandBuffers[_swapChain.currentFrame]);
+
+    // if(result == VK_ERROR_OUT_OF_DATE_KHR)
+    // {
+    //     recreate();
+    //     return getNextImageIndex();
+    // }
+    // else if(result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+    // {
+    //     throw std::runtime_error("Failed to acquire swap chain image!");
+    // }
+
+    // // Signal frame Start to imGUI
+    // _core->getImGUIHandler().onFrameStart();
+
+    // Set aside return value
+    uint32_t fetchedFrameNumber = _swapChain.currentFrame;
+
+    // Increate current frame counter
+    _swapChain.currentFrame = (_swapChain.currentFrame + 1) % getSettingsData(_core->getRegistry()).framesInFlight;
+
+    return fetchedFrameNumber;
+}
+
+void swap_chain_system::presentImage(uint32_t frame)
+{
+    VkPresentInfoKHR presentInfo{};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = &_swapChain.renderFinishedSemaphores[frame];
+
+    VkSwapchainKHR swapChains[] = {_swapChain.swapChain};
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = swapChains;
+    presentInfo.pImageIndices = &_swapChain.ImageIndices[frame];
+    presentInfo.pResults = nullptr; // Optional
+
+    VkResult result = vkQueuePresentKHR(_presentationQueue, &presentInfo);
+
+    if(result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
     {
         recreate();
-        return getNextImageIndex(semaphore, fence);
     }
-    else if(result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+    else if(result != VK_SUCCESS)
     {
-        throw std::runtime_error("Failed to acquire swap chain image!");
+        throw std::runtime_error("Failed to present swap chain image!");
     }
-
-    return imageIndex;
 }
 
 bool swap_chain_system::createSwapChain()
@@ -40,10 +90,10 @@ bool swap_chain_system::createSwapChain()
     VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities);
 
     // determine the number of images in the swap chain
-    uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
-    if(swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount)
+    uint32_t imageCount = getSettingsData(_core->getRegistry()).framesInFlight;
+    if(swapChainSupport.capabilities.maxImageCount < imageCount && imageCount > swapChainSupport.capabilities.maxImageCount)
     {
-        imageCount = swapChainSupport.capabilities.maxImageCount;
+        std::runtime_error("Requested SwapChain image count is greater than the maximum image count supported by the swap chain!");
     }
 
     VkSwapchainCreateInfoKHR createInfo{};
@@ -91,6 +141,12 @@ bool swap_chain_system::createSwapChain()
     _swapChain.ImageFormat = surfaceFormat.format;
     _swapChain.Extent = extent;
 
+    _swapChain.ImageIndices.resize(imageCount);
+    _swapChain.commandBuffers = std::vector<VkCommandBuffer>(imageCount, VK_NULL_HANDLE) ;       // Need to initialize these buffers
+    // _swapChain.inFlightFences = std::vector<VkFence>(imageCount, VK_NULL_HANDLE);     // Need to initialize these fences
+    // _swapChain.imageAvailableSemaphores = std::vector<VkSemaphore>(imageCount, VK_NULL_HANDLE);     // Need to initialize these semaphores
+    // _swapChain.renderFinishedSemaphores = std::vector<VkSemaphore>(imageCount, VK_NULL_HANDLE);     // Need to initialize these semaphores
+
     return true;
 }
 
@@ -128,7 +184,7 @@ void swap_chain_system::createFramebuffers()
 
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = _core->getPipelineSystem().getRenderPass();
+        framebufferInfo.renderPass = _core->getPipelineSystem().getRenderPass(E_RenderPassType::COLOR_DEPTH);
         framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
         framebufferInfo.pAttachments = attachments.data();
         framebufferInfo.width = _swapChain.Extent.width;
@@ -138,6 +194,39 @@ void swap_chain_system::createFramebuffers()
         if(vkCreateFramebuffer(_core->getLogicalDevice(), &framebufferInfo, nullptr, &_swapChain.Framebuffers[i]) != VK_SUCCESS)
         {
             throw std::runtime_error("Failed to create framebuffer!");
+        }
+    }
+}
+
+void swap_chain_system::createCommandBuffers()
+{
+    _swapChain.commandBuffers = _core->getCommandBufferSystem().createCommandBuffers(_swapChain.Images.size());
+}
+
+void swap_chain_system::createSyncObjects()
+{
+    unsigned int framesinFlight = getSettingsData(_core->getScene()->getRegistry()).framesInFlight;
+
+    _swapChain.imageAvailableSemaphores.resize(framesinFlight);
+    _swapChain.renderFinishedSemaphores.resize(framesinFlight);
+    _swapChain.inFlightFences.resize(framesinFlight);
+    
+    VkSemaphoreCreateInfo semaphoreInfo{};
+    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+    VkFenceCreateInfo fenceInfo{};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    VkDevice device = _core->getLogicalDevice();
+
+    for(size_t i(0); i < framesinFlight; ++i)
+    {
+        if(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &_swapChain.imageAvailableSemaphores[i]) != VK_SUCCESS ||
+            vkCreateSemaphore(device, &semaphoreInfo, nullptr, &_swapChain.renderFinishedSemaphores[i]) != VK_SUCCESS ||
+            vkCreateFence(device, &fenceInfo, nullptr, &_swapChain.inFlightFences[i]) != VK_SUCCESS)
+        {
+            throw std::runtime_error("failed to create synchronization objects for a frame!");
         }
     }
 }
@@ -152,23 +241,44 @@ void swap_chain_system::recreate()
     createImageViews();
     createDepthResources();
     createFramebuffers();
+    createCommandBuffers();
+    createSyncObjects();
 }
 
 void swap_chain_system::cleanup()
 {
+    // Image Views
     for(auto imageView : _swapChain.ImageViews)
     {
         vkDestroyImageView(_core->getLogicalDevice(), imageView, nullptr);
     }
 
+    // Swap Chain extension
     vkDestroySwapchainKHR(_core->getLogicalDevice(), _swapChain.swapChain, nullptr);
 
+    // Framebuffers
     for(auto framebuffer : _swapChain.Framebuffers)
     {
         vkDestroyFramebuffer(_core->getLogicalDevice(), framebuffer, nullptr);
     }
 
+    // Depth Image
     _core->getTextureSystem().cleanupImage(_swapChain.depthImage);
+
+    // Fences
+    for(size_t i(0); i < _swapChain.inFlightFences.size(); ++i) {
+    vkDestroyFence(_core->getLogicalDevice(), _swapChain.inFlightFences[i], nullptr);
+    }
+
+    // Image Available Semaphores
+    for(size_t i(0); i < _swapChain.imageAvailableSemaphores.size(); ++i) {
+    vkDestroySemaphore(_core->getLogicalDevice(), _swapChain.imageAvailableSemaphores[i], nullptr);
+    }
+
+    // Render Finished Semaphores
+    for(size_t i(0); i < _swapChain.renderFinishedSemaphores.size(); ++i) {
+    vkDestroySemaphore(_core->getLogicalDevice(), _swapChain.renderFinishedSemaphores[i], nullptr);
+    }
 
 }
 
@@ -177,7 +287,42 @@ swapChain& swap_chain_system::getSwapChain()
     return _swapChain;
 }
 
-SwapChainSupportDetails swap_chain_system::querySwapChainSupport(VkPhysicalDevice device)
+uint32_t swap_chain_system::getSwapChainImageIndex(uint32_t index) const
+{
+    return _swapChain.ImageIndices[index];
+}
+
+const VkCommandBuffer& swap_chain_system::getCommandBuffer(uint32_t index) const
+{
+    return _swapChain.commandBuffers[index];
+}
+
+const VkImageView& swap_chain_system::getImageView(uint32_t index) const
+{
+    return _swapChain.ImageViews[index];
+}
+
+const VkFramebuffer& swap_chain_system::getFramebuffer(uint32_t index) const
+{
+    return _swapChain.Framebuffers[index];
+}
+
+const VkFence& swap_chain_system::getInFlightFence(uint32_t index) const
+{
+    return _swapChain.inFlightFences[index];
+}
+
+const VkSemaphore& swap_chain_system::getImageAvailableSemaphore(uint32_t index) const
+{
+    return _swapChain.imageAvailableSemaphores[index];
+}
+
+const VkSemaphore& swap_chain_system::getRenderFinishedSemaphore(uint32_t index) const
+{
+    return _swapChain.renderFinishedSemaphores[index];
+}
+
+SwapChainSupportDetails swap_chain_system::querySwapChainSupport(VkPhysicalDevice device) const
 {
     SwapChainSupportDetails details;
 
@@ -204,7 +349,7 @@ SwapChainSupportDetails swap_chain_system::querySwapChainSupport(VkPhysicalDevic
     return details;
 }
 
-VkSurfaceFormatKHR swap_chain_system::chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)
+VkSurfaceFormatKHR swap_chain_system::chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const
 {
     for (const auto& availableFormat : availableFormats)
     {
@@ -217,7 +362,7 @@ VkSurfaceFormatKHR swap_chain_system::chooseSwapSurfaceFormat(const std::vector<
     return availableFormats[0];
 }
 
-VkPresentModeKHR swap_chain_system::chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes)
+VkPresentModeKHR swap_chain_system::chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) const
 {
     for (const auto& availablePresentMode : availablePresentModes)
     {
@@ -230,7 +375,7 @@ VkPresentModeKHR swap_chain_system::chooseSwapPresentMode(const std::vector<VkPr
     return VK_PRESENT_MODE_FIFO_KHR;
 }
 
-VkExtent2D swap_chain_system::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities)
+VkExtent2D swap_chain_system::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) const
 {
     if(capabilities.currentExtent.width != UINT32_MAX)
     {
