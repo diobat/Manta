@@ -4,7 +4,7 @@
 layout (location = 0) in vec3 FragPos;    
 
 // Uniforms
-layout (set = 0, binding = 1) uniform sampler2D textureMap;
+layout (set = 0, binding = 0) uniform sampler2D textureMap;
 
 // Outputs
 layout (location = 0) out vec3 FragColor;
