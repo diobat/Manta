@@ -83,6 +83,12 @@ void pipeline_system::cleanup()
 
 shaderPipeline& pipeline_system::getPipeline(std::string name)
 {
+
+    if(_pipelines.find(name) == _pipelines.end())
+    {
+        throw std::runtime_error("Pipeline not found");
+    }
+
     return _pipelines[name];
 }
 
@@ -159,7 +165,7 @@ VkPipelineLayout pipeline_system::generatePipelineLayout(const shaderProgram& pr
             layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             layoutBinding.descriptorCount = 1;
             layoutBinding.stageFlags = _core->getShaderSystem().getVkShaderStageFlagBits(shader.type);
-
+            
             descriptorSetsUsed.insert(set);
             descriptorSetLayoutBindings[set].push_back(layoutBinding);
         }
@@ -516,10 +522,10 @@ void pipeline_system::initializeRenderPasses()
 
     VkRenderPass _renderPassCube;
 
-    if(vkCreateRenderPass(_core->getLogicalDevice(), &renderPassInfoCube, nullptr, &renderPass) != VK_SUCCESS)
+    if(vkCreateRenderPass(_core->getLogicalDevice(), &renderPassInfoCube, nullptr, &_renderPassCube) != VK_SUCCESS)
     {
         throw std::runtime_error("failed to create render pass!");
     }
 
-    _renderPass[E_RenderPassType::CUBE_MAP] = renderPass;
+    _renderPass[E_RenderPassType::CUBE_MAP] = _renderPassCube;
 }

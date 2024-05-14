@@ -3,6 +3,8 @@
 #include "rendering/rendering.hpp"
 #include "util/modelImporter.hpp"
 
+#include "util/VertexShapes.hpp"
+
 texture_system::texture_system(rendering_system* rendering) :
     _core(rendering),
     _mipLevels(1)
@@ -61,7 +63,7 @@ VkDescriptorImageInfo& texture_system::getTextureSamplerDescriptor()
     return _textureSamplerDescriptor;
 }
 
-image texture_system::createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties)
+image texture_system::createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, bool isCubeMap)
 {
     image img;
 
@@ -77,7 +79,15 @@ image texture_system::createImage(uint32_t width, uint32_t height, uint32_t mipL
     imageInfo.extent.depth = 1;
 
     imageInfo.mipLevels = mipLevels;
-    imageInfo.arrayLayers = 1;
+    if(isCubeMap)
+    {
+        imageInfo.arrayLayers = 6;
+        imageInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+    }
+    else
+    {
+        imageInfo.arrayLayers = 1;
+    }
     
     imageInfo.format = format;
     imageInfo.tiling = tiling;
@@ -115,62 +125,35 @@ image texture_system::createImage(uint32_t width, uint32_t height, uint32_t mipL
     return img;
 }
 
-
 // Temporary and must be removed later then texture system is fully ported
 image texture_system::createTexture(const std::string& path, E_TextureType type, bool addToCache)
 {
     image img;
 
-    loadedImageData loadedImage = STB_load_image(path);
-
-    if(!loadedImage.data)
+    // check if the image ends with .hdr
+    if(path.substr(path.find_last_of(".") + 1) == "hdr")
     {
-        throw std::runtime_error("Failed to load texture image!");
+        loadedImageDataHDR imgData = STB_load_image_HDR(path);
+        img = createTexture(imgData, VK_FORMAT_R32G32B32A32_SFLOAT, type, addToCache);
     }
-
-    // Calculate memory size of the image, 4 bytes per pixel
-    VkDeviceSize imageSize = loadedImage.width * loadedImage.height * 4;
-
-    // Calculate the number of mip levels based on the image dimensions
-    img.mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(loadedImage.width, loadedImage.height)))) + 1;
-
-    memoryBuffer stagingBuffer = _core->getMemorySystem().createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-    void* data;
-    vkMapMemory(_core->getLogicalDevice(), stagingBuffer.memory, 0, imageSize, 0, &data);
-    memcpy(data, loadedImage.data, static_cast<size_t>(imageSize));
-    vkUnmapMemory(_core->getLogicalDevice(), stagingBuffer.memory);
-
-    free_image(loadedImage.data);
-
-    img = createImage(loadedImage.width, loadedImage.height, img.mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-    transitionImageLayout(img.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, img.mipLevels);
-    copyBufferToImage(stagingBuffer.buffer, img.image, static_cast<uint32_t>(loadedImage.width), static_cast<uint32_t>(loadedImage.height));
-    generateMipMaps(img.image, VK_FORMAT_R8G8B8A8_SRGB, loadedImage.width, loadedImage.height, img.mipLevels);
-
-    _core->getMemorySystem().freeBuffer(stagingBuffer);
-
-    // Populate the image view
-    createTextureImageView(img, VK_FORMAT_R8G8B8A8_SRGB);
-
-    // Populate the descriptor image info
-    img.descriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    img.descriptor.imageView = img.imageView;
-    img.descriptor.sampler = _textureSampler;
-
-    // Add to _textures
-    if(addToCache)
+    else
     {
-        addTextureToCache(type, img);
+        loadedImageDataRGB imgData = STB_load_image(path);
+        img = createTexture(imgData, VK_FORMAT_R8G8B8A8_SRGB, type, addToCache);
     }
 
     return img;
 }
 
-image texture_system::createTexture(const loadedImageData imgData, VkFormat format, E_TextureType type,  bool addToCache)
+image texture_system::createTexture(const loadedImageDataRGB imgData, VkFormat format, E_TextureType type,  bool addToCache)
 {
     image img;
+
+    // Check if imgData.data is not null
+    if(imgData.data == nullptr)
+    {
+        throw std::runtime_error("Image data is null");
+    }
 
     // Calculate memory size of the image, 4 bytes per pixel
     VkDeviceSize imageSize = imgData.width * imgData.height * 4;
@@ -212,6 +195,203 @@ image texture_system::createTexture(const loadedImageData imgData, VkFormat form
     return img;
 }
 
+image texture_system::createTexture(const loadedImageDataHDR imgData, VkFormat format, E_TextureType type,  bool addToCache)
+{
+    image img;
+
+    // Check if imgData.data is not null
+    if(imgData.data == nullptr)
+    {
+        throw std::runtime_error("Image data is null");
+    }
+
+    // Calculate memory size of the image, 4 bytes per pixel
+    VkDeviceSize imageSize = imgData.width * imgData.height * 4 * sizeof(float);
+
+    // Calculate the number of mip levels based on the image dimensions
+    img.mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(imgData.width, imgData.height)))) + 1;
+
+    memoryBuffer stagingBuffer = _core->getMemorySystem().createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    void* data;
+    vkMapMemory(_core->getLogicalDevice(), stagingBuffer.memory, 0, imageSize, 0, &data);
+    memcpy(data, imgData.data, static_cast<size_t>(imageSize));
+    vkUnmapMemory(_core->getLogicalDevice(), stagingBuffer.memory);
+
+    free_image(imgData.data);
+
+    img = createImage(imgData.width, imgData.height, img.mipLevels, format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    transitionImageLayout(img.image, format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, img.mipLevels);
+    copyBufferToImage(stagingBuffer.buffer, img.image, static_cast<uint32_t>(imgData.width), static_cast<uint32_t>(imgData.height));
+    generateMipMaps(img.image, format, imgData.width, imgData.height, img.mipLevels);
+
+    _core->getMemorySystem().freeBuffer(stagingBuffer);
+
+    // Populate the image view
+    createTextureImageView(img, format);
+
+    // Populate the descriptor image info
+    img.descriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    img.descriptor.imageView = img.imageView;
+    img.descriptor.sampler = _textureSampler;
+
+    // Add to _textures
+    if(addToCache)
+    {
+        addTextureToCache(E_TextureType::DIFFUSE, img);
+    }
+
+    return img;
+}
+
+image texture_system::bakeCubemap(const std::string& filePath, bool addToCache)
+{
+    image img = createTexture(filePath, E_TextureType::CUBEMAP, false);
+    
+
+    return bakeCubemapFromFlat(img, addToCache);
+}
+
+image texture_system::bakeCubemapFromFlat(image flatImg, bool addToCache)
+{
+    // 0 - Check if the image is valid
+    if(flatImg.image == VK_NULL_HANDLE)
+    {
+        throw std::runtime_error("Image is not valid");
+    }
+
+    // 1 - Create Cubemap image
+    uint32_t size_width = 512;
+    uint32_t size_height = 512;
+
+    image img = createImage(size_width, size_height, 1, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, true);
+
+    // 2 - Create Cubemap image view
+    createImageView(img, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_IMAGE_VIEW_TYPE_CUBE);
+
+    // 3 - Create Cubemap framebuffer
+    VkFramebuffer framebuffer;
+
+    std::array<VkImageView, 1> attachments = {
+        img.imageView
+    };
+
+    VkFramebufferCreateInfo framebufferInfo{};
+    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebufferInfo.renderPass = _core->getPipelineSystem().getRenderPass(E_RenderPassType::CUBE_MAP);
+    framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+    framebufferInfo.pAttachments = attachments.data();
+    framebufferInfo.width = size_width;
+    framebufferInfo.height = size_height;
+    framebufferInfo.layers = 6;
+
+    if(vkCreateFramebuffer(_core->getLogicalDevice(), &framebufferInfo, nullptr, &framebuffer) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to create framebuffer!");
+    }
+
+    // 4 - Render the cubemap
+    shaderPipeline cubemapPipeline;
+    try{
+        cubemapPipeline = _core->getPipelineSystem().getPipeline("equi2cube");
+    }
+    catch(const std::exception& e)
+    {   
+        _core->getPipelineSystem().createPipeline("equi2cube", E_RenderPassType::CUBE_MAP);
+        cubemapPipeline = _core->getPipelineSystem().getPipeline("equi2cube");
+    }
+
+    renderRequest requestInfo;
+    requestInfo.commandBuffer = _core->getCommandBufferSystem().generateCommandBuffer();
+    requestInfo.renderPass = E_RenderPassType::CUBE_MAP;
+    requestInfo.framebuffer = framebuffer;
+    requestInfo.extent = {size_width, size_height};
+    requestInfo.pipeline = cubemapPipeline;
+    requestInfo.pushConstantsStage = VK_SHADER_STAGE_VERTEX_BIT;
+
+    VkFenceCreateInfo fenceInfo{};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    vkCreateFence(_core->getLogicalDevice(), &fenceInfo, nullptr, &requestInfo.fence);
+
+    VkDescriptorSet textureDescriptorSet;
+    // Populate the descriptor image info
+    _core->getFrameManager().getReadyDescriptorBuilder()
+        .bindImage(0, &flatImg.descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+        .build(textureDescriptorSet);
+
+    requestInfo.descriptorSets.push_back(textureDescriptorSet);
+
+    // Get the cube model
+    Model cube = _core->getModelMeshLibrary().createModelFromMesh("cube", shapes::cube::mesh(glm::vec3(1.0f)));
+
+    std::vector<Model> models;
+    models.push_back(cube);
+
+    _core->getCommandBufferSystem().beginRecordingCommandBuffer(requestInfo.commandBuffer, requestInfo.renderPass, requestInfo.framebuffer, requestInfo.extent);
+
+    for (int i = 0; i < 6; i++)
+    {
+        requestInfo.pushConstants = &i;
+        requestInfo.pushConstantsSize = sizeof(int);
+
+        _core->getCommandBufferSystem().recordCommandBuffer(requestInfo, models);
+    }
+
+    VkFence safeToDestroyFence;
+    _core->getCommandBufferSystem().endRecordingCommandBuffer(requestInfo.commandBuffer);
+    _core->getCommandBufferSystem().submitCommandBuffer(requestInfo.commandBuffer, requestInfo.fence);
+
+    // 7 - Add to cache
+    addTextureToCache(E_TextureType::CUBEMAP, img);
+
+    // 8 - Cleanup
+    vkWaitForFences(_core->getLogicalDevice(), 1, &requestInfo.fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+    _core->getCommandBufferSystem().freeCommandBuffers(requestInfo.commandBuffer);
+    vkDestroyFramebuffer(_core->getLogicalDevice(), framebuffer, nullptr);
+    vkDestroyFence(_core->getLogicalDevice(), requestInfo.fence, nullptr);
+
+    return img;
+}
+
+VkImageView texture_system::createImageView(image& img, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels, VkImageViewType viewType)
+{
+    img.imageView = createImageView(img.image, format, aspectFlags, mipLevels, viewType);
+    return img.imageView;
+}
+
+VkImageView texture_system::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels, VkImageViewType viewType)
+{
+    VkImageViewCreateInfo viewInfo = {};
+    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    viewInfo.image = image;
+    viewInfo.viewType = viewType;
+    viewInfo.format = format;
+    viewInfo.subresourceRange.aspectMask = aspectFlags;
+    viewInfo.subresourceRange.baseMipLevel = 0;
+    viewInfo.subresourceRange.levelCount = mipLevels;
+    viewInfo.subresourceRange.baseArrayLayer = 0;
+
+    switch (viewType)
+    {
+    case VK_IMAGE_VIEW_TYPE_CUBE:
+        viewInfo.subresourceRange.layerCount = 6;
+        break;
+    default:
+        viewInfo.subresourceRange.layerCount = 1;
+        break;
+    }
+
+    VkImageView imageView;
+    if(vkCreateImageView(_core->getLogicalDevice(), &viewInfo, nullptr, &imageView) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to create texture image view!");
+    }
+
+    return imageView;
+}
+
 VkImageView texture_system::createTextureImageView(image& img, VkFormat format)
 {
     return createImageView(img, format, VK_IMAGE_ASPECT_COLOR_BIT, img.mipLevels);
@@ -250,52 +430,6 @@ std::vector<VkDescriptorImageInfo> texture_system::aggregateDescriptorTextureInf
         }
     }
     return imageInfos;
-}
-
-VkImageView texture_system::createImageView(image& img, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels)
-{
-    VkImageViewCreateInfo viewInfo = {};
-    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    viewInfo.image = img.image;
-    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    viewInfo.format = format;
-    viewInfo.subresourceRange.aspectMask = aspectFlags;
-    viewInfo.subresourceRange.baseMipLevel = 0;
-    viewInfo.subresourceRange.levelCount = mipLevels;
-    viewInfo.subresourceRange.baseArrayLayer = 0;
-    viewInfo.subresourceRange.layerCount = 1;
-
-    VkImageView imageView;
-    if(vkCreateImageView(_core->getLogicalDevice(), &viewInfo, nullptr, &imageView) != VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to create texture image view!");
-    }
-
-    img.imageView = imageView;
-
-    return imageView;
-}
-
-VkImageView texture_system::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels)
-{
-    VkImageViewCreateInfo viewInfo = {};
-    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    viewInfo.image = image;
-    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    viewInfo.format = format;
-    viewInfo.subresourceRange.aspectMask = aspectFlags;
-    viewInfo.subresourceRange.baseMipLevel = 0;
-    viewInfo.subresourceRange.levelCount = mipLevels;
-    viewInfo.subresourceRange.baseArrayLayer = 0;
-    viewInfo.subresourceRange.layerCount = 1;
-
-    VkImageView imageView;
-    if(vkCreateImageView(_core->getLogicalDevice(), &viewInfo, nullptr, &imageView) != VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to create texture image view!");
-    }
-
-    return imageView;
 }
 
 void texture_system::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
