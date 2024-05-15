@@ -13,6 +13,9 @@
 class rendering_system;
 struct shaderProgram;
 
+const unsigned int PUSH_CONSTANT_VERTEX_OFFSET = 0;
+const unsigned int PUSH_CONSTANT_FRAGMENT_OFFSET = 128;
+
 enum class E_RenderPassType : unsigned int
 {
     COLOR_DEPTH,                // 1 color 1 depth no stencil

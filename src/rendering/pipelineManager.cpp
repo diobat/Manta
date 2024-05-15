@@ -114,7 +114,8 @@ VkPipelineLayout pipeline_system::generatePipelineLayout(const shaderProgram& pr
     std::vector<std::vector<VkDescriptorSetLayoutBinding>> descriptorSetLayoutBindings;
     descriptorSetLayoutBindings.resize(maxSets);
     // Same for push constant ranges
-    std::vector<VkPushConstantRange> pushConstantRanges;
+    std::vector<VkPushConstantRange> pushConstantRanges_VERTEX;
+    std::vector<VkPushConstantRange> pushConstantRanges_FRAGMENT;
 
     std::set<uint32_t> descriptorSetsUsed;
 
@@ -132,14 +133,38 @@ VkPipelineLayout pipeline_system::generatePipelineLayout(const shaderProgram& pr
 
         spirv_cross::ShaderResources resources = comp.get_shader_resources();
 
-        // Push constants
+        // Push constants for vertex shader
         for (auto& resource : resources.push_constant_buffers) 
         {
             VkPushConstantRange pushConstantRange{};
             pushConstantRange.stageFlags = _core->getShaderSystem().getVkShaderStageFlagBits(shader.type);
-            pushConstantRange.offset = pushConstantRanges.empty() ? 0 : pushConstantRanges.back().offset + pushConstantRanges.back().size;
+
+            if(pushConstantRange.stageFlags != VK_SHADER_STAGE_VERTEX_BIT)
+            {
+                continue;
+            }
+
+            pushConstantRange.offset = pushConstantRanges_VERTEX.empty() ? PUSH_CONSTANT_VERTEX_OFFSET : pushConstantRanges_VERTEX.back().offset + pushConstantRanges_VERTEX.back().size;
             pushConstantRange.size = comp.get_declared_struct_size(comp.get_type(resource.base_type_id));
-            pushConstantRanges.push_back(pushConstantRange);
+
+            pushConstantRanges_VERTEX.push_back(pushConstantRange);
+        }
+
+        // Push constants for the fragment shader
+        for(auto& resource : resources.push_constant_buffers)
+        {
+            VkPushConstantRange pushConstantRange{};
+            pushConstantRange.stageFlags = _core->getShaderSystem().getVkShaderStageFlagBits(shader.type);
+
+            if(pushConstantRange.stageFlags != VK_SHADER_STAGE_FRAGMENT_BIT)
+            {
+                continue;
+            }
+
+            pushConstantRange.offset = pushConstantRanges_FRAGMENT.empty() ? PUSH_CONSTANT_FRAGMENT_OFFSET : pushConstantRanges_FRAGMENT.back().offset + pushConstantRanges_FRAGMENT.back().size;
+            pushConstantRange.size = comp.get_declared_struct_size(comp.get_type(resource.base_type_id));
+            pushConstantRange.size = pushConstantRange.size % PUSH_CONSTANT_FRAGMENT_OFFSET;
+            pushConstantRanges_FRAGMENT.push_back(pushConstantRange);
         }
 
         // Uniform buffers
@@ -217,9 +242,14 @@ VkPipelineLayout pipeline_system::generatePipelineLayout(const shaderProgram& pr
         {
             std::cerr << "Failed to create descriptor set layout" << std::endl;
         }
-
     }
-    VkPipelineLayout pipelineLayout = createPipelineLayout(descriptorSetLayouts, pushConstantRanges);
+
+    std::vector<VkPushConstantRange> allPushConstantRanges;
+    allPushConstantRanges.reserve(pushConstantRanges_VERTEX.size() + pushConstantRanges_FRAGMENT.size());
+    allPushConstantRanges.insert(allPushConstantRanges.end(), pushConstantRanges_VERTEX.begin(), pushConstantRanges_VERTEX.end());
+    allPushConstantRanges.insert(allPushConstantRanges.end(), pushConstantRanges_FRAGMENT.begin(), pushConstantRanges_FRAGMENT.end());
+
+    VkPipelineLayout pipelineLayout = createPipelineLayout(descriptorSetLayouts, allPushConstantRanges);
 
     vkDestroyDescriptorSetLayout(_core->getLogicalDevice(), descriptorSetLayouts[0], nullptr);
 
