@@ -11,7 +11,7 @@ command_buffer_system::command_buffer_system(rendering_system* core, VkQueue& gr
     _framesInFlight(getSettingsData(core->getRegistry()).framesInFlight)
 {
     // Set the default clear values
-    _clearValues[0].color = {0.0f, 0.0f, 0.0f, 1.0f};
+    _clearValues[0].color = {0.2f, 0.2f, 0.2f, 1.0f};
     _clearValues[1].depthStencil = {1.0f, 0};
 }
 
@@ -169,101 +169,6 @@ VkResult command_buffer_system::endRecordingCommandBuffer(VkCommandBuffer& comma
     return vkEndCommandBuffer(commandBuffer);
 }
 
-void command_buffer_system::recordCommandBuffer(uint32_t frameIndex, uint32_t swapChainImageIndex)
-{
-    const VkCommandBuffer& commandBuffer = _core->getSwapChainSystem().getCommandBuffer(frameIndex);
-
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = 0; // Optional
-    beginInfo.pInheritanceInfo = nullptr; // Optional
-
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _core->getPipelineSystem().getPipeline("basic").pipeline);
-
-    vkCmdSetViewport(commandBuffer, 0, 1, &_viewport);
-
-    vkCmdSetScissor(commandBuffer, 0, 1, &_scissor);
-
-    _core->getFrameManager().updateUniformBuffers(frameIndex);
-
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _core->getPipelineSystem().getPipeline("basic").layout, 0, 1, & _core->getFrameManager().getDescriptorSet(descriptorSetType::MVP_MATRICES, frameIndex), 0, nullptr);
-
-    auto renderModels = _core->getScene()->getRegistry().view<Model>();
-
-    unsigned int i{0};
-    for(auto entity : renderModels)
-    {
-        auto& model = renderModels.get<Model>(entity);
-
-        // Push constants
-        vkCmdPushConstants(commandBuffer, _core->getPipelineSystem().getPipeline("basic").layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(int), &i);
-
-        for(auto& mesh : *model.meshes)
-        {
-            // Attribute data
-            VkDeviceSize offsets[] = {0};
-            vkCmdBindVertexBuffers(commandBuffer, 0, 1, &mesh.vertexBuffer.buffer, offsets);
-            vkCmdBindIndexBuffer(commandBuffer, mesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-
-            unsigned int textureIndex = mesh.textureIndices[static_cast<unsigned int>(E_TextureType::DIFFUSE)];
-
-            vkCmdPushConstants(commandBuffer, _core->getPipelineSystem().getPipeline("basic").layout, VK_SHADER_STAGE_FRAGMENT_BIT, 128, sizeof(int), &textureIndex);
-
-            // Draw call
-            vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(mesh.indexData.size()), 1, 0, 0, 0);
-        }
-        i++;
-    }
-    
-}
-
-void command_buffer_system::recordCommandBuffer(uint32_t frameIndex)
-{
-    const VkCommandBuffer& commandBuffer = _core->getSwapChainSystem().getCommandBuffer(frameIndex);
-
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = 0; // Optional
-    beginInfo.pInheritanceInfo = nullptr; // Optional
-
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _core->getPipelineSystem().getPipeline("basic").pipeline);
-
-    vkCmdSetViewport(commandBuffer, 0, 1, &_viewport);
-
-    vkCmdSetScissor(commandBuffer, 0, 1, &_scissor);
-
-    _core->getFrameManager().updateUniformBuffers(frameIndex);
-
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _core->getPipelineSystem().getPipeline("basic").layout, 0, 1, & _core->getFrameManager().getDescriptorSet(descriptorSetType::MVP_MATRICES, frameIndex), 0, nullptr);
-
-    auto renderModels = _core->getScene()->getRegistry().view<Model>();
-
-    unsigned int i{0};
-    for(auto entity : renderModels)
-    {
-        auto& model = renderModels.get<Model>(entity);
-
-        // Push constants
-        vkCmdPushConstants(commandBuffer, _core->getPipelineSystem().getPipeline("basic").layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(int), &i);
-
-        for(auto& mesh : *model.meshes)
-        {
-            // Attribute data
-            VkDeviceSize offsets[] = {0};
-            vkCmdBindVertexBuffers(commandBuffer, 0, 1, &mesh.vertexBuffer.buffer, offsets);
-            vkCmdBindIndexBuffer(commandBuffer, mesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-
-            unsigned int textureIndex = mesh.textureIndices[static_cast<unsigned int>(E_TextureType::DIFFUSE)];
-
-            vkCmdPushConstants(commandBuffer, _core->getPipelineSystem().getPipeline("basic").layout, VK_SHADER_STAGE_FRAGMENT_BIT, 128, sizeof(int), &textureIndex);
-
-            // Draw call
-            vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(mesh.indexData.size()), 1, 0, 0, 0);
-        }
-        i++;
-    }     
-}
-
 void command_buffer_system::recordCommandBuffer(renderRequest& request, std::vector<Model>& models)
 {
     // Begin the command buffer
@@ -285,18 +190,31 @@ void command_buffer_system::recordCommandBuffer(renderRequest& request, std::vec
         0, 
         nullptr);
 
+
+    // vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _core->getPipelineSystem().getPipeline("basic").layout, 0, 1, & _core->getFrameManager().getDescriptorSet(descriptorSetType::MVP_MATRICES, frameIndex), 0, nullptr);
+
     // Push constants
-    vkCmdPushConstants(request.commandBuffer, request.pipeline.layout, request.pushConstantsStage , 0, request.pushConstantsSize , &request.pushConstants);
+    if(request.pushConstants != nullptr && request.pushConstantsSize > 0)
+    {
+        vkCmdPushConstants(request.commandBuffer, request.pipeline.layout, request.pushConstantsStage , 0, request.pushConstantsSize , &request.pushConstants);        
+    }
+
 
     // Draw calls
     for(auto& model : models)
     {
-        for(auto& mesh : *model.meshes)
+        // Model matrix push constants
+        vkCmdPushConstants(request.commandBuffer, request.pipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(unsigned int), &model.id);
+
+            for(auto& mesh : *model.meshes)
         {
             // Attribute data
             VkDeviceSize offsets[] = {0};
             vkCmdBindVertexBuffers(request.commandBuffer, 0, 1, &mesh.vertexBuffer.buffer, offsets);
             vkCmdBindIndexBuffer(request.commandBuffer, mesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+
+            // Texture Index ush constants
+            vkCmdPushConstants(request.commandBuffer, request.pipeline.layout, VK_SHADER_STAGE_FRAGMENT_BIT, 128, sizeof(unsigned int), &mesh.textureIndices[static_cast<unsigned int>(E_TextureType::DIFFUSE)]);
 
             // Draw call
             vkCmdDrawIndexed(request.commandBuffer, static_cast<uint32_t>(mesh.indexData.size()), 1, 0, 0, 0);

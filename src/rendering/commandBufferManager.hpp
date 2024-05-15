@@ -15,6 +15,8 @@
 class rendering_system;
 struct Model;
 
+
+
 struct renderRequest
 {
     VkCommandBuffer commandBuffer;
@@ -28,8 +30,8 @@ struct renderRequest
     VkFence fence;
 
     // Push constants
-    const void* pushConstants;
-    size_t pushConstantsSize;
+    const void* pushConstants = nullptr;
+    size_t pushConstantsSize = 0;
     VkShaderStageFlagBits pushConstantsStage;
 };
 
@@ -55,8 +57,6 @@ public:
     VkResult beginRecordingCommandBuffer(VkCommandBuffer& commandBuffer, E_RenderPassType renderPassType, VkFramebuffer framebuffer, VkExtent2D extent);
     VkResult endRecordingCommandBuffer(VkCommandBuffer& commandBuffer);
 
-    void recordCommandBuffer(uint32_t frameIndex, uint32_t swapChainImageIndex);
-    void recordCommandBuffer(uint32_t frameIndex);
     void recordCommandBuffer(renderRequest& request, std::vector<Model>& models);
     
     void resetCommandBuffer(VkCommandBuffer& commandBuffer);
