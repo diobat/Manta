@@ -27,7 +27,7 @@ Model ModelImporter::importFromFile(const std::string& absolutePath)
     // Load the model
     processNode(scene, scene->mRootNode, absolutePath);
 
-    return Model{absolutePath, _meshLibrary->getMeshes(absolutePath)};
+    return Model{0, absolutePath, _meshLibrary->getMeshes(absolutePath)};
 }
 
 void ModelImporter::processNode(const aiScene* scene, aiNode* node, const std::string& absolutePath)
@@ -226,5 +226,5 @@ Model ModelImporter::importFromMeshData(const std::string& name, const Mesh& mes
 
     _meshLibrary->_meshes[name]->push_back(importedMesh);
 
-    return Model{name, _meshLibrary->getMeshes(name), name, modelMatrix};
+    return Model{0, name, _meshLibrary->getMeshes(name), name, modelMatrix};
 }

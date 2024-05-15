@@ -26,6 +26,8 @@ struct Mesh
 
 struct Model
 {
+    unsigned int id = 0;
+
     std::string path;
 
     std::shared_ptr<std::vector<Mesh>> meshes = nullptr;

@@ -4,6 +4,11 @@
 // First-party includes
 #include "helpers/RootDir.hpp"
 
+namespace 
+{
+    unsigned int nextId = 0;
+}
+
 model_mesh_library::model_mesh_library(rendering_system* core)  :
     _factory(this),
     _core(core)
@@ -24,11 +29,12 @@ entt::entity model_mesh_library::createModel(entt::registry& registry, const std
     {
         Model& newModel = registry.emplace<Model>(modelEntity, _factory.importFromFile(absolutePath));
         newModel.name = name;
+        newModel.id = nextId++;
         _loadedModelPaths.insert(absolutePath);
     }
     else
     {
-        registry.emplace<Model>(modelEntity, Model{absolutePath, getMeshes(absolutePath), name});
+        registry.emplace<Model>(modelEntity, Model{nextId++, absolutePath, getMeshes(absolutePath), name});
     }
 
     return modelEntity;
@@ -46,7 +52,7 @@ entt::entity model_mesh_library::createModelFromMesh(entt::registry& registry, c
     }
     else
     {
-        registry.emplace<Model>(modelEntity, Model{name, getMeshes(name), name});
+        registry.emplace<Model>(modelEntity, Model{nextId++, name, getMeshes(name), name});
     }
 
     return modelEntity;
@@ -64,7 +70,7 @@ entt::entity model_mesh_library::createModelFromMesh(entt::registry& registry, c
     }
     else
     {
-        result = Model{name, getMeshes(name), name};
+        result = Model{nextId++, name, getMeshes(name), name};
     }
     
     return result;
