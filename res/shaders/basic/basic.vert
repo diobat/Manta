@@ -11,7 +11,7 @@ layout (set = 0, binding = 1) uniform ModelMatrices{
 } modelMatrices;
 
 layout (push_constant) uniform PushConstantObject {
-    uint index;
+    layout(offset = 0) uint index;
 } pc;
 
 layout (location = 0) in vec3 inPosition;
