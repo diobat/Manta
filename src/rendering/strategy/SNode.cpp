@@ -42,7 +42,28 @@ RenderOpaqueNode::RenderOpaqueNode(const StrategyChain* chain) : StrategyNode(ch
 
 void RenderOpaqueNode::run()
 {
-    _chain->core()->getCommandBufferSystem().recordCommandBuffer(_chain->currentFrame());
+    uint32_t currentFrame = _chain->currentFrame();
+
+    // Render request struct populating
+    renderRequest request;
+    request.commandBuffer = _chain->core()->getSwapChainSystem().getCommandBuffer(currentFrame);
+    request.renderPass = E_RenderPassType::COLOR_DEPTH;
+    request.framebuffer = _chain->core()->getSwapChainSystem().getFramebuffer(currentFrame);
+    request.extent = _chain->core()->getSwapChainSystem().getSwapChain().Extent;
+    request.pipeline = _chain->core()->getPipelineSystem().getPipeline("basic");
+    _chain->core()->getFrameManager().updateUniformBuffers(currentFrame);
+    request.descriptorSets.push_back(_chain->core()->getFrameManager().getDescriptorSet(descriptorSetType::MVP_MATRICES, currentFrame));
+
+    // Gather all models in a vector
+    std::vector<Model> models;
+    for(auto& entity : _chain->core()->getRegistry().view<Model>())
+    {
+        Model model = _chain->core()->getRegistry().get<Model>(entity);
+        models.push_back(model);
+    }
+
+    _chain->core()->getCommandBufferSystem().recordCommandBuffer(request, models);
+
 }
 
 void RenderOpaqueNode::prepare()
