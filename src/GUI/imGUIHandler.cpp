@@ -68,7 +68,7 @@ void imGUI_handler::onFrameStart()
 
 void imGUI_handler::createUI()
 {
-    if (!ImGui::Begin("Dear ImGui Demo", &_showGUI))
+    if (!ImGui::Begin("Vox - Debugger", &_showGUI))
     {
         // Early out if the window is collapsed, as an optimization.
         ImGui::End();
