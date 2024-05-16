@@ -16,12 +16,20 @@ class rendering_system;
 struct Model;
 
 
+struct PushConstant
+{
+    VkShaderStageFlagBits stageFlags = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
+    void* data = nullptr;
+    uint32_t offset = 0;
+    uint32_t size = 0;
+};
+
 
 struct renderRequest
 {
     VkCommandBuffer commandBuffer;
 
-    E_RenderPassType renderPass;
+    E_RenderPassType renderPass = E_RenderPassType::COLOR_DEPTH;
     VkFramebuffer framebuffer;
     VkExtent2D extent;
     shaderPipeline pipeline;
@@ -29,8 +37,16 @@ struct renderRequest
 
     VkFence fence;
 
+    // Models
+    std::vector<Model> models;
+
     // Push constants
+    PushConstant generalPC;
+    std::vector<PushConstant> perModelPC;
+    bool useTextureLibraryBinds = false;
+
     const void* pushConstants = nullptr;
+    size_t pushConstantsOffset = 0;
     size_t pushConstantsSize = 0;
     VkShaderStageFlagBits pushConstantsStage;
 };
@@ -57,7 +73,7 @@ public:
     VkResult beginRecordingCommandBuffer(VkCommandBuffer& commandBuffer, E_RenderPassType renderPassType, VkFramebuffer framebuffer, VkExtent2D extent);
     VkResult endRecordingCommandBuffer(VkCommandBuffer& commandBuffer);
 
-    void recordCommandBuffer(renderRequest& request, std::vector<Model>& models);
+    void recordCommandBuffer(const renderRequest& request);
     
     void resetCommandBuffer(VkCommandBuffer& commandBuffer);
     void submitCommandBuffer(VkCommandBuffer& cmdBuffer, VkFence fence = VK_NULL_HANDLE);

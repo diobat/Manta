@@ -326,8 +326,7 @@ image texture_system::bakeCubemapFromFlat(image flatImg, bool addToCache)
     // Get the cube model
     Model cube = _core->getModelMeshLibrary().createModelFromMesh("cube", shapes::cube::mesh(glm::vec3(1.0f)));
 
-    std::vector<Model> models;
-    models.push_back(cube);
+    requestInfo.models.push_back(cube);
 
     _core->getCommandBufferSystem().beginRecordingCommandBuffer(requestInfo.commandBuffer, requestInfo.renderPass, requestInfo.framebuffer, requestInfo.extent);
 
@@ -336,7 +335,7 @@ image texture_system::bakeCubemapFromFlat(image flatImg, bool addToCache)
         requestInfo.pushConstants = &i;
         requestInfo.pushConstantsSize = sizeof(int);
 
-        _core->getCommandBufferSystem().recordCommandBuffer(requestInfo, models);
+        _core->getCommandBufferSystem().recordCommandBuffer(requestInfo);
     }
 
     VkFence safeToDestroyFence;

@@ -53,17 +53,32 @@ void RenderOpaqueNode::run()
     request.pipeline = _chain->core()->getPipelineSystem().getPipeline("basic");
     _chain->core()->getFrameManager().updateUniformBuffers(currentFrame);
     request.descriptorSets.push_back(_chain->core()->getFrameManager().getDescriptorSet(descriptorSetType::MVP_MATRICES, currentFrame));
+    request.useTextureLibraryBinds = true;
 
-    // Gather all models in a vector
-    std::vector<Model> models;
-    for(auto& entity : _chain->core()->getRegistry().view<Model>())
+    auto& allModelsView = _chain->core()->getRegistry().view<Model>();
+
+    // Reserve space for models and per model push constants so that pointers don't get invalidated later
+    request.models.reserve(allModelsView.size());
+    request.perModelPC.reserve(allModelsView.size());
+
+    // Gather models
+    for(auto& entity : allModelsView)
     {
-        Model model = _chain->core()->getRegistry().get<Model>(entity);
-        models.push_back(model);
+        request.models.push_back(_chain->core()->getRegistry().get<Model>(entity));
     }
 
-    _chain->core()->getCommandBufferSystem().recordCommandBuffer(request, models);
+    // Push constants
+    for(int i = 0; i < request.models.size(); ++i)
+    {
+        PushConstant perModel_pc;
+        perModel_pc.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        perModel_pc.data = &request.models[i].id;
+        perModel_pc.size = sizeof(request.models[i].id);
+        perModel_pc.offset = PUSH_CONSTANT_VERTEX_OFFSET;
+        request.perModelPC.push_back(perModel_pc);
+    }
 
+    _chain->core()->getCommandBufferSystem().recordCommandBuffer(request);
 }
 
 void RenderOpaqueNode::prepare()

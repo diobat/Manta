@@ -169,8 +169,15 @@ VkResult command_buffer_system::endRecordingCommandBuffer(VkCommandBuffer& comma
     return vkEndCommandBuffer(commandBuffer);
 }
 
-void command_buffer_system::recordCommandBuffer(renderRequest& request, std::vector<Model>& models)
+void command_buffer_system::recordCommandBuffer(const renderRequest& request)
 {
+
+    // Verify that the number of per model push constants match the number of models
+    if(request.perModelPC.size() != 0 && request.perModelPC.size() != request.models.size())
+    {
+        throw std::runtime_error("The number of per model push constants does not match the number of models.");
+    }
+
     // Begin the command buffer
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -190,32 +197,36 @@ void command_buffer_system::recordCommandBuffer(renderRequest& request, std::vec
         0, 
         nullptr);
 
-
-    // vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _core->getPipelineSystem().getPipeline("basic").layout, 0, 1, & _core->getFrameManager().getDescriptorSet(descriptorSetType::MVP_MATRICES, frameIndex), 0, nullptr);
-
-    // Push constants
-    if(request.pushConstants != nullptr && request.pushConstantsSize > 0)
+    // General push constant
+    if(request.generalPC.size > 0)
     {
-        vkCmdPushConstants(request.commandBuffer, request.pipeline.layout, request.pushConstantsStage , 0, request.pushConstantsSize , &request.pushConstants);        
+        vkCmdPushConstants(request.commandBuffer, request.pipeline.layout, request.generalPC.stageFlags, request.generalPC.offset, request.generalPC.size, request.generalPC.data);
     }
 
-
     // Draw calls
-    for(auto& model : models)
+    for(size_t i{0}; i < request.models.size() ; ++i)
     {
-        // Model matrix push constants
-        vkCmdPushConstants(request.commandBuffer, request.pipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(unsigned int), &model.id);
+        // Model specific push constants
+        if(request.perModelPC.size() > 0)
+        {
+            unsigned int modelID = * (unsigned int*) &request.perModelPC[i].data;
+            vkCmdPushConstants(request.commandBuffer, request.pipeline.layout, request.perModelPC[i].stageFlags , request.perModelPC[i].offset, request.perModelPC[i].size, request.perModelPC[i].data);
+        }
 
-            for(auto& mesh : *model.meshes)
+
+        for(auto& mesh : *request.models[i].meshes)
         {
             // Attribute data
             VkDeviceSize offsets[] = {0};
             vkCmdBindVertexBuffers(request.commandBuffer, 0, 1, &mesh.vertexBuffer.buffer, offsets);
             vkCmdBindIndexBuffer(request.commandBuffer, mesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 
-            // Texture Index ush constants
-            vkCmdPushConstants(request.commandBuffer, request.pipeline.layout, VK_SHADER_STAGE_FRAGMENT_BIT, 128, sizeof(unsigned int), &mesh.textureIndices[static_cast<unsigned int>(E_TextureType::DIFFUSE)]);
-
+            // Texture Index push constants
+            if(request.useTextureLibraryBinds)
+            {
+                vkCmdPushConstants(request.commandBuffer, request.pipeline.layout, VK_SHADER_STAGE_FRAGMENT_BIT, 128, sizeof(unsigned int), &mesh.textureIndices[static_cast<unsigned int>(E_TextureType::DIFFUSE)]);
+            }
+            
             // Draw call
             vkCmdDrawIndexed(request.commandBuffer, static_cast<uint32_t>(mesh.indexData.size()), 1, 0, 0, 0);
         }
