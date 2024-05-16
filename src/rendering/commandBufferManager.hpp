@@ -33,22 +33,18 @@ struct renderRequest
     VkFramebuffer framebuffer;
     VkExtent2D extent;
     shaderPipeline pipeline;
-    std::vector<VkDescriptorSet> descriptorSets;
-
     VkFence fence;
 
     // Models
     std::vector<Model> models;
 
+    // Descriptor sets
+    std::vector<VkDescriptorSet> descriptorSets;
+
     // Push constants
     PushConstant generalPC;
     std::vector<PushConstant> perModelPC;
     bool useTextureLibraryBinds = false;
-
-    const void* pushConstants = nullptr;
-    size_t pushConstantsOffset = 0;
-    size_t pushConstantsSize = 0;
-    VkShaderStageFlagBits pushConstantsStage;
 };
 
 struct FrameData
