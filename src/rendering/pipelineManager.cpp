@@ -71,9 +71,9 @@ void pipeline_system::cleanup()
     for (auto& pipeline : _pipelines)
     {
         vkDestroyPipeline(_core->getLogicalDevice(), pipeline.second.pipeline, nullptr);
+        vkDestroyPipelineLayout(_core->getLogicalDevice(), pipeline.second.layout, nullptr);
     }
 
-    vkDestroyPipelineLayout(_core->getLogicalDevice(), _pipelineLayout, nullptr);
 
     for(auto& renderPass : _renderPass)
     {
