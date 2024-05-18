@@ -30,7 +30,6 @@ void command_buffer_system::createCommandPools()
     _scissor.offset = {0, 0};
     _scissor.extent = _core->getSwapChainSystem().getSwapChain().Extent;
 
-
     QueueFamilyIndices queueFamilyIndices = findQueueFamilies(_core->getPhysicalDevice(), _core->getSurface());
 
     VkCommandPoolCreateInfo poolInfo{};
@@ -65,18 +64,6 @@ std::vector<VkCommandBuffer> command_buffer_system::createCommandBuffers(short u
     {
         throw std::runtime_error("failed to allocate command buffers!");
     }
-
-    // // Create the cube map baking command buffer
-    // VkCommandBufferAllocateInfo cubeMapBakingAllocInfo{};
-    // cubeMapBakingAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    // cubeMapBakingAllocInfo.commandPool = _commandPool;
-    // cubeMapBakingAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    // cubeMapBakingAllocInfo.commandBufferCount = 1;
-
-    // if(vkAllocateCommandBuffers(_core->getLogicalDevice(), &cubeMapBakingAllocInfo, &_cubeMapBakingCommandBuffer) != VK_SUCCESS)
-    // {
-    //     throw std::runtime_error("failed to allocate cube map baking command buffer!");
-    // }
 
     return commandBuffers;
 }
@@ -185,9 +172,12 @@ void command_buffer_system::recordCommandBuffer(const renderRequest& request)
     beginInfo.pInheritanceInfo = nullptr; // Optional
 
     // Bind pipeline, set viewpoet and scissor
+    VkViewport viewport = validateViewport(request.viewport);
+    VkRect2D scissor = validateScissor(request.scissor);
+
     vkCmdBindPipeline(request.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, request.pipeline.pipeline);
-    vkCmdSetViewport(request.commandBuffer, 0, 1, &_viewport);
-    vkCmdSetScissor(request.commandBuffer, 0, 1, &_scissor);
+    vkCmdSetViewport(request.commandBuffer, 0, 1, &viewport);
+    vkCmdSetScissor(request.commandBuffer, 0, 1, &scissor);
 
     // Descriptor set
     vkCmdBindDescriptorSets(request.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, request.pipeline.layout, 
@@ -287,13 +277,33 @@ void command_buffer_system::freeCommandBuffers(std::vector<VkCommandBuffer>& com
     vkFreeCommandBuffers(_core->getLogicalDevice(), _commandPool, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
 }
 
+const std::array<VkClearValue, 2>& command_buffer_system::getClearValues() const
+{
+    return _clearValues;
+}
+
 void command_buffer_system::cleanup()
 {
     vkDestroyCommandPool(_core->getLogicalDevice(), _commandPool, nullptr);
     vkDestroyCommandPool(_core->getLogicalDevice(), _transferCommandPool, nullptr);
 }
 
-const std::array<VkClearValue, 2>& command_buffer_system::getClearValues() const
+VkViewport command_buffer_system::validateViewport(const VkViewport& viewport)
 {
-    return _clearValues;
+    VkViewport result = viewport;
+    if(viewport.width == 0.0f || viewport.height == 0.0f)
+    {
+        result = _viewport;
+    }
+    return result;
+}
+
+VkRect2D command_buffer_system::validateScissor(const VkRect2D& scissor)
+{
+    VkRect2D result = scissor;
+    if(scissor.extent.width == 0 || scissor.extent.height == 0)
+    {
+        result = _scissor;
+    }
+    return result;
 }

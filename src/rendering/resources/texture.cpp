@@ -4,6 +4,7 @@
 #include "util/modelImporter.hpp"
 
 #include "util/VertexShapes.hpp"
+#include "ECS/components/spatial.hpp"
 
 texture_system::texture_system(rendering_system* rendering) :
     _core(rendering),
@@ -15,7 +16,7 @@ texture_system::texture_system(rendering_system* rendering) :
 void texture_system::init()
 {
     initTextureSampler();
-    _defaultTexture = createTexture("X:/Repos/Manta/res/missingTexture.png",E_TextureType::DIFFUSE , false);
+    _defaultTexture = createTexture("X:/Repos/Manta/res/missingTexture.png",E_TextureType::DIFFUSE , true);
 }
 
 void texture_system::initTextureSampler()
@@ -34,7 +35,7 @@ void texture_system::initTextureSampler()
 
     samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
     samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-    samplerInfo.unnormalizedCoordinates = VK_FALSE;
+    samplerInfo.unnormalizedCoordinates = VK_TRUE;
     samplerInfo.compareEnable = VK_FALSE;
     samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
     samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
@@ -262,8 +263,8 @@ image texture_system::bakeCubemapFromFlat(image flatImg, bool addToCache)
     }
 
     // 1 - Create Cubemap image
-    uint32_t size_width = 512;
-    uint32_t size_height = 512;
+    uint32_t size_width = 2048;
+    uint32_t size_height = 2048;
 
     image img = createImage(size_width, size_height, 1, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, true);
 
@@ -308,12 +309,14 @@ image texture_system::bakeCubemapFromFlat(image flatImg, bool addToCache)
     requestInfo.framebuffer = framebuffer;
     requestInfo.extent = {size_width, size_height};
     requestInfo.pipeline = cubemapPipeline;
-    requestInfo.pushConstantsStage = VK_SHADER_STAGE_VERTEX_BIT;
 
     VkFenceCreateInfo fenceInfo{};
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
     vkCreateFence(_core->getLogicalDevice(), &fenceInfo, nullptr, &requestInfo.fence);
+
+    requestInfo.viewport = {0.0f, 0.0f, static_cast<float>(size_width), static_cast<float>(size_height), 0.0f, 1.0f};
+    requestInfo.scissor = {{0, 0}, {size_width, size_height}};
 
     VkDescriptorSet textureDescriptorSet;
     // Populate the descriptor image info
@@ -324,19 +327,24 @@ image texture_system::bakeCubemapFromFlat(image flatImg, bool addToCache)
     requestInfo.descriptorSets.push_back(textureDescriptorSet);
 
     // Get the cube model
-    Model cube = _core->getModelMeshLibrary().createModelFromMesh("cube", shapes::cube::mesh(glm::vec3(1.0f)));
-
-    requestInfo.models.push_back(cube);
+    Model& cube = _core->getModelMeshLibrary().createModelFromMesh("cube", shapes::cube::mesh(glm::vec3(1.0f)));
+    requestInfo.models = std::vector<Model>(6, cube);
 
     _core->getCommandBufferSystem().beginRecordingCommandBuffer(requestInfo.commandBuffer, requestInfo.renderPass, requestInfo.framebuffer, requestInfo.extent);
 
-    for (int i = 0; i < 6; i++)
-    {
-        requestInfo.pushConstants = &i;
-        requestInfo.pushConstantsSize = sizeof(int);
+    int faces[] = {0, 1, 2, 3, 4, 5};
 
-        _core->getCommandBufferSystem().recordCommandBuffer(requestInfo);
+    for (int i = 0; i < 6; i++)
+    {   
+        PushConstant pcModel;
+        pcModel.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        pcModel.data = &faces[i];
+        pcModel.size = sizeof(int);
+        pcModel.offset = PUSH_CONSTANT_VERTEX_OFFSET;
+        requestInfo.perModelPC.push_back(pcModel);
     }
+
+    _core->getCommandBufferSystem().recordCommandBuffer(requestInfo);
 
     VkFence safeToDestroyFence;
     _core->getCommandBufferSystem().endRecordingCommandBuffer(requestInfo.commandBuffer);
@@ -347,6 +355,7 @@ image texture_system::bakeCubemapFromFlat(image flatImg, bool addToCache)
 
     // 8 - Cleanup
     vkWaitForFences(_core->getLogicalDevice(), 1, &requestInfo.fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+    cleanupImage(flatImg);
     _core->getCommandBufferSystem().freeCommandBuffers(requestInfo.commandBuffer);
     vkDestroyFramebuffer(_core->getLogicalDevice(), framebuffer, nullptr);
     vkDestroyFence(_core->getLogicalDevice(), requestInfo.fence, nullptr);

@@ -22,23 +22,24 @@ namespace
     Model cubeModel;
     std::vector<float> cubeVertices = {
         // positions
-        -1.0f, 1.0f, -1.0f, // Front-top-left
-        -1.0f, -1.0f, -1.0f, // Front-bottom-left
-        1.0f, -1.0f, -1.0f, // Front-bottom-right
-        1.0f, 1.0f, -1.0f, // Front-top-right
+        -1.0f,  1.0f, -1.0f,        // 0 Front-top-left
+        -1.0f, -1.0f, -1.0f,        // 1 Front-bottom-left
+         1.0f, -1.0f, -1.0f,        // 2 Front-bottom-right
+         1.0f,  1.0f, -1.0f,        // 3 Front-top-right
 
-        -1.0f, 1.0f, 1.0f, // Back-top-left
-        -1.0f, -1.0f, 1.0f, // Back-bottom-left
-        1.0f, -1.0f, 1.0f, // Back-bottom-right
-        1.0f, 1.0f, 1.0f // Back-top-right
+        -1.0f,  1.0f,  1.0f,        // 4 Back-top-left
+        -1.0f, -1.0f,  1.0f,        // 5 Back-bottom-left
+         1.0f, -1.0f,  1.0f,        // 6 Back-bottom-right
+         1.0f,  1.0f,  1.0f         // 7 Back-top-right
     };
+
     std::vector<unsigned int> cubeIndices = {
-        0, 1, 2, 2, 3, 0, // Front face
-        4, 5, 6, 6, 7, 4, // Back face
-        0, 4, 7, 7, 3, 0, // Top face
-        1, 5, 6, 6, 2, 1, // Bottom face
-        0, 1, 5, 5, 4, 0, // Left face
-        3, 2, 6, 6, 7, 3 // Right face
+        0, 2, 1, 2, 0, 3, // Front face
+        4, 6, 5, 6, 4, 7, // Back face
+        0, 7, 3, 7, 0, 4, // Top face
+        1, 6, 5, 6, 1, 2, // Bottom face
+        0, 5, 4, 5, 0, 1, // Left face
+        3, 6, 2, 6, 3, 7  // Right face
     };
 
 
@@ -132,14 +133,19 @@ namespace shapes
 
                 Mesh cubeMesh;
 
-                for (unsigned int i = 0; i < sizeof(cubeVertices) / sizeof(float); i += 3)
+                unsigned int cubeVerticesSize = cubeVertices.size();
+
+                for (unsigned int i = 0; i < cubeVertices.size(); i += 3)
                 {
                     Vertex vertex;
-                    vertex.Position = glm::vec3(cubeVertices[i], cubeVertices[i + 1], cubeVertices[i + 2]);
+                    vertex.Position = glm::vec3(cubeVertices[i] , cubeVertices[i + 1], cubeVertices[i + 2]);
                     vertex.Color = glm::vec3(color[0], color[1], color[2]);
                     cubeMesh.vertexData.push_back(vertex);
                 }
                 cubeMesh.indexData = cubeIndices;
+                cubeMesh.path = "Cube";
+                cubeModel.meshes = std::make_shared<std::vector<Mesh>>();
+                cubeModel.meshes->push_back(cubeMesh);
             }
             cubeModel.modelMatrix = glm::translate(glm::mat4(1.0f), pos);
 
@@ -150,7 +156,7 @@ namespace shapes
         {
             Mesh cubeMesh;
 
-            for (unsigned int i = 0; i < sizeof(cubeVertices) / sizeof(float); i += 3)
+            for (unsigned int i = 0; i < cubeVertices.size(); i += 3)
             {
                 Vertex vertex;
                 vertex.Position = glm::vec3(cubeVertices[i], cubeVertices[i + 1], cubeVertices[i + 2]);

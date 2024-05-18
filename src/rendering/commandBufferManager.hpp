@@ -33,6 +33,10 @@ struct renderRequest
     VkFramebuffer framebuffer;
     VkExtent2D extent;
     shaderPipeline pipeline;
+
+    VkViewport viewport = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+    VkRect2D scissor = {{0, 0}, {0, 0}};
+
     VkFence fence;
 
     // Models
@@ -83,6 +87,10 @@ public:
     void cleanup();
 
 private:
+
+    VkViewport validateViewport(const VkViewport& viewport);
+    VkRect2D validateScissor(const VkRect2D& scissor);
+
     rendering_system* _core;
 
     const unsigned int& _framesInFlight;
