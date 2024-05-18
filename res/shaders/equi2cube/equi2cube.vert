@@ -1,4 +1,5 @@
 #version 450
+#extension GL_ARB_shader_viewport_layer_array : enable
 
 // Inputs
 layout (location = 0) in vec3 inPosition;
@@ -26,42 +27,44 @@ mat4 views[6] = {
     lookAt(vec3(0.0, 0.0, 0.0), vec3( 0.0,  0.0, -1.0), vec3(0.0, -1.0, 0.0))
 };
 
-mat4 proj = perspective(radians(90.0), 1.0, 0.1, 10.0);
+mat4 proj = perspective(90.0, 1.0, 0.1, 10.0);
 
 void main()
 {
     FragPos = inPosition;
+    gl_Layer = pc.index;
     gl_Position = proj * views[pc.index] * vec4(inPosition, 1.0);
 }
 
 
 mat4 lookAt(vec3 eye, vec3 at, vec3 up) {
 
-    vec3 f = normalize(at - eye);
-    vec3 s = normalize(cross(f, up));
-    vec3 u = cross(s, f);
+    vec3 zaxis = normalize(eye - at);           // The "forward" vector.
+    vec3 xaxis = normalize(cross(up, zaxis));   // The "right" vector.
+    vec3 yaxis = cross(zaxis, xaxis);           // The "up" vector.
 
-    mat4 result;
-    result[0] = vec4(s, 0.0);
-    result[1] = vec4(u, 0.0);
-    result[2] = vec4(-f, 0.0);
-    result[3] = vec4(0.0, 0.0, 0.0, 1.0);
+    // Create a 4x4 view matrix from the right, up, forward and eye position vectors
+    mat4 viewMatrix = {
+        vec4(      xaxis.x,            yaxis.x,            zaxis.x,       0 ),
+        vec4(      xaxis.y,            yaxis.y,            zaxis.y,       0 ),
+        vec4(      xaxis.z,            yaxis.z,            zaxis.z,       0 ),
+        vec4(-dot( xaxis, eye ), -dot( yaxis, eye ), -dot( zaxis, eye ),  1 )
+    };
 
-    result = transpose(result);
-    result[3] = vec4(dot(-s, eye), dot(-u, eye), dot(f, eye), 1.0);
-
-    return result;
+    return viewMatrix;
 }
 
-mat4 perspective(float fovy, float aspect, float near, float far) {
-    float tanHalfFovy = tan(radians(fovy) / 2.0);
+mat4 perspective(float fov, float aspect, float near, float far) {
+
+    float tanHalfFov = tan(radians(fov) / 2.0);
     mat4 result = mat4(0.0);
 
-    result[0][0] = 1.0 / (aspect * tanHalfFovy);
-    result[1][1] = 1.0 / tanHalfFovy;
+    result[0][0] = 1.0 / (aspect * tanHalfFov);
+    result[1][1] = 1.0 / tanHalfFov;
     result[2][2] = -(far + near) / (far - near);
     result[2][3] = -1.0;
     result[3][2] = -(2.0 * far * near) / (far - near);
+    // result[3][2] = -(far * near) / (far - near);
 
     return result;
 }
