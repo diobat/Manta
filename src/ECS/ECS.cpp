@@ -50,11 +50,11 @@ entt::entity Scene::addModel(const std::string& path, const std::array<float, 3>
 {
     entt::entity model = _core->getRendering().lock()->getModelMeshLibrary().createModel(_registry, path);
 
-    // Set spatial data
-    _registry.emplace<position>(model, glm::vec3(initialPosition[0], initialPosition[1], initialPosition[2]));
-    _registry.emplace<rotation>(model, glm::quat(glm::radians(glm::vec3(initialRotation[0], initialRotation[1], initialRotation[2]))));
-    _registry.emplace<scale>(model, glm::vec3(initialScale[0], initialScale[1], initialScale[2]));
+    glm::vec3 position = glm::vec3(initialPosition[0], initialPosition[1], initialPosition[2]);
+    glm::quat rotation = glm::quat(glm::radians(glm::vec3(initialRotation[0], initialRotation[1], initialRotation[2])));
+    glm::vec3 scale = glm::vec3(initialScale[0], initialScale[1], initialScale[2]);
 
+    addSpatialComponents(_registry, model, position, rotation, scale);
 
     return model;
 }
