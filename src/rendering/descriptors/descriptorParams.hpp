@@ -2,10 +2,11 @@
 
 
 // Descriptor pool sizes
-static const unsigned int kMaxBindlessResources = 100;
+static constexpr unsigned int kMaxBindlessResources = 100;
 
 // Descriptor pool sizes
-static const unsigned int kMaxDescriptorSets = 1000;
+static constexpr unsigned int kMaxDescriptorSets = 1000;
 
 // Texture array default size
-static const unsigned int kTextureArraySize = 4096;
+static constexpr unsigned int kTextureArraySize = 4096;
+static constexpr unsigned int kCubemapArraySize = 64;
