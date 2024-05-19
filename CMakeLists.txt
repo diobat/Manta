@@ -145,6 +145,37 @@ target_link_libraries(${PROJECT_NAME} PUBLIC imgui)
 ######################################## Vulkan
 find_package(Vulkan REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan::Vulkan)
+
+######################################## Boost
+# Boost is different than the others. Due to its size we don't want to build it, we want to download it
+# as a pre-compiled library and link it to our project.
+message(STATUS "Downloading pre-compiled boost library sources.")
+set(FETCHCONTENT_QUIET TRUE) # Sets the output level of the build process to terminal
+option(DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+
+set(BOOST_INCLUDE_LIBRARIES uuid filesystem)
+set(BOOST_ENABLE_CMAKE ON)
+set(Boost_NO_SYSTEM_PATHS ON)
+
+set(Boost_USE_STATIC_LIBS ON) 
+set(Boost_USE_MULTITHREADED ON)  
+set(Boost_USE_STATIC_RUNTIME OFF)
+
+FetchContent_Declare(
+    Boost 
+    URL https://github.com/boostorg/boost/releases/download/boost-1.84.0/boost-1.84.0.7z
+    USES_TERMINAL_DOWNLOAD TRUE 
+    GIT_PROGRESS TRUE   
+    DOWNLOAD_NO_EXTRACT FALSE
+)
+FetchContent_MakeAvailable(Boost)
+target_link_libraries(${PROJECT_NAME} PUBLIC Boost::uuid Boost::filesystem)
+install(TARGETS 
+boost_uuid boost_assert boost_config boost_container_hash boost_core boost_io boost_move boost_numeric_conversion boost_predef boost_static_assert boost_throw_exception boost_tti boost_type_traits boost_winapi boost_describe boost_mp11 boost_random boost_mpl boost_preprocessor boost_conversion boost_function_types boost_array boost_dynamic_bitset boost_integer boost_range boost_utility 
+boost_system boost_smart_ptr boost_detail boost_concept_check boost_iterator boost_optional boost_regex boost_tuple boost_variant2
+boost_fusion boost_typeof boost_functional boost_function boost_bind boost_filesystem boost_atomic boost_align
+EXPORT ${PROJECT_NAME}Config)
+
 ######################################## 
 # Restore dev warnings
 set(CMAKE_WARN_DEPRECATED ON CACHE BOOL "" FORCE)
