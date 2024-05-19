@@ -102,7 +102,7 @@ void rendering_system::initRender()
     _swapChains.createSwapChain();
     
     _pipelines.init();
-    _pipelines.createPipeline("basic");
+    //_pipelines.createPipeline("basic");
     _commandBuffer.createCommandPools();
 
     // Init ImGUI
@@ -114,16 +114,12 @@ void rendering_system::initRender()
     _swapChains.createCommandBuffers();
     _swapChains.createSyncObjects();
 
-    _strategyChain = std::make_shared<PBSShadingStrategyChain>(this);    
+    _frames.allocateUniformBuffers(100);
 
     // Resource initialization
     _texture.init();
-}
 
-void rendering_system::firstTimeSetup()
-{
-    _frames.allocateUniformBuffers(100);
-    _frames.createDescriptorSets();
+    _strategyChain = std::make_shared<PBSShadingStrategyChain>(this);    
 }
 
 void rendering_system::createSurface()

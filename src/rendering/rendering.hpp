@@ -72,9 +72,6 @@ public:
 
     imGUI_handler& getImGUIHandler() { return _imGUI; }                             // imGUI handler getter
 
-    void firstTimeSetup();
-    bool firstTime = true;
-
 private:
     // Initialization
     void init();
@@ -100,7 +97,6 @@ private:
         void createLogicalDevice();
 
         // Resource setup
-        // void createTextureSampler();
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
         VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,

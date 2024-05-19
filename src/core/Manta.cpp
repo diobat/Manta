@@ -12,8 +12,6 @@ Manta::Manta()
 
 void Manta::run()
 {
-    m_rendering->firstTimeSetup();
-
     while (!glfwWindowShouldClose(m_rendering->getWindow())) {
         glfwPollEvents();
         m_user_input->executeCurrentInputs();
