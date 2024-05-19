@@ -17,6 +17,7 @@ void texture_system::init()
 {
     initTextureSampler();
     _defaultTexture = createTexture("X:/Repos/Manta/res/missingTexture.png",E_TextureType::DIFFUSE , true);
+    _defaultTexture = createTexture("X:/Repos/Manta/res/missingTexture.png",E_TextureType::CUBEMAP , true);
 }
 
 void texture_system::initTextureSampler()
@@ -190,7 +191,7 @@ image texture_system::createTexture(const loadedImageDataRGB imgData, VkFormat f
     // Add to _textures
     if(addToCache)
     {
-        addTextureToCache(E_TextureType::DIFFUSE, img);
+        addTextureToCache(type, img);
     }
 
     return img;
@@ -240,7 +241,7 @@ image texture_system::createTexture(const loadedImageDataHDR imgData, VkFormat f
     // Add to _textures
     if(addToCache)
     {
-        addTextureToCache(E_TextureType::DIFFUSE, img);
+        addTextureToCache(type, img);
     }
 
     return img;
@@ -416,7 +417,7 @@ VkImageView texture_system::createTextureImageView(image& img, VkFormat format)
     return createImageView(img, format, VK_IMAGE_ASPECT_COLOR_BIT, img.mipLevels);
 }
 
-std::vector<VkDescriptorImageInfo> texture_system::aggregateDescriptorTextureInfos(E_TextureType type, size_t returnVectorSize) const
+std::vector<VkDescriptorImageInfo>& texture_system::aggregateDescriptorTextureInfos(E_TextureType type, size_t returnVectorSize)
 {
     if(_textures.find(type) == _textures.end())
     {
@@ -433,7 +434,6 @@ std::vector<VkDescriptorImageInfo> texture_system::aggregateDescriptorTextureInf
         throw std::runtime_error("The number of textures in cache set exceeds the maximum number of textures allowed by argument");
     }
 
-    // Get default Texture
     std::vector<VkDescriptorImageInfo> imageInfos;
 
     for(auto& texture : *_textures.at(type))
@@ -448,7 +448,10 @@ std::vector<VkDescriptorImageInfo> texture_system::aggregateDescriptorTextureInf
             imageInfos.push_back(_defaultTexture.descriptor);
         }
     }
-    return imageInfos;
+
+    _textureDescriptors[type] = imageInfos;
+
+    return _textureDescriptors[type];
 }
 
 void texture_system::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)

@@ -74,7 +74,7 @@ public:
 
     VkImageView createTextureImageView(image& img, VkFormat format = VK_FORMAT_R8G8B8A8_SRGB);
 
-    std::vector<VkDescriptorImageInfo> aggregateDescriptorTextureInfos(E_TextureType type,  size_t returnVectorSize) const;
+    std::vector<VkDescriptorImageInfo>& aggregateDescriptorTextureInfos(E_TextureType type,  size_t returnVectorSize);
 
     // Exists temporarily as some older code depends on overloading with a different signature
     void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
@@ -93,6 +93,7 @@ private:
     image _defaultTexture; 
 
     std::unordered_map<E_TextureType, std::shared_ptr<std::vector<image>>> _textures;
+    std::unordered_map<E_TextureType, std::vector<VkDescriptorImageInfo>> _textureDescriptors;
 
     uint32_t _mipLevels = 1;                                // mip levels
     VkSampler _textureSampler;
