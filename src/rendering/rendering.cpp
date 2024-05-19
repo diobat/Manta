@@ -118,17 +118,12 @@ void rendering_system::initRender()
 
     // Resource initialization
     _texture.init();
-
 }
 
 void rendering_system::firstTimeSetup()
 {
-
-
     _frames.allocateUniformBuffers(100);
     _frames.createDescriptorSets();
-    // _commandBuffer.createCommandBuffers();
-    //createSyncObjects();
 }
 
 void rendering_system::createSurface()
@@ -163,7 +158,6 @@ void rendering_system::createLogicalDevice()
     descriptorIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
     descriptorIndexingFeatures.runtimeDescriptorArray = VK_TRUE;
 
-
     VkDeviceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 
@@ -181,7 +175,6 @@ void rendering_system::createLogicalDevice()
         createInfo.enabledLayerCount = 0;
     }
     createInfo.pNext = &descriptorIndexingFeatures;
-
 
     if(vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_device) != VK_SUCCESS){
         throw std::runtime_error("failed to create logical device!");
