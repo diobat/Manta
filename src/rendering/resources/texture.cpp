@@ -35,7 +35,7 @@ void texture_system::initTextureSampler()
 
     samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
     samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-    samplerInfo.unnormalizedCoordinates = VK_TRUE;
+    samplerInfo.unnormalizedCoordinates = VK_FALSE;
     samplerInfo.compareEnable = VK_FALSE;
     samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
     samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
@@ -271,7 +271,12 @@ image texture_system::bakeCubemapFromFlat(image flatImg, bool addToCache)
     // 2 - Create Cubemap image view
     createImageView(img, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_IMAGE_VIEW_TYPE_CUBE);
 
-    // 3 - Create Cubemap framebuffer
+    // 3 - Populate the descriptor image info
+    img.descriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    img.descriptor.imageView = img.imageView;
+    img.descriptor.sampler = _textureSampler;
+
+    // 4 - Create Cubemap framebuffer
     VkFramebuffer framebuffer;
 
     std::array<VkImageView, 1> attachments = {
@@ -292,7 +297,7 @@ image texture_system::bakeCubemapFromFlat(image flatImg, bool addToCache)
         throw std::runtime_error("Failed to create framebuffer!");
     }
 
-    // 4 - Render the cubemap
+    // 5 - Render the cubemap
     shaderPipeline cubemapPipeline;
     try{
         cubemapPipeline = _core->getPipelineSystem().getPipeline("equi2cube");
@@ -359,6 +364,12 @@ image texture_system::bakeCubemapFromFlat(image flatImg, bool addToCache)
     _core->getCommandBufferSystem().freeCommandBuffers(requestInfo.commandBuffer);
     vkDestroyFramebuffer(_core->getLogicalDevice(), framebuffer, nullptr);
     vkDestroyFence(_core->getLogicalDevice(), requestInfo.fence, nullptr);
+
+
+    if(addToCache)
+    {
+        addTextureToCache(E_TextureType::CUBEMAP, img);
+    }
 
     return img;
 }
