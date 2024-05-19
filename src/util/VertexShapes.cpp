@@ -35,7 +35,7 @@ namespace
 
     std::vector<unsigned int> cubeIndices = {
         0, 2, 1, 2, 0, 3, // Front face
-        4, 6, 5, 6, 4, 7, // Back face
+        4, 5, 6, 6, 7, 4, // Back face
         0, 7, 3, 7, 0, 4, // Top face
         1, 6, 5, 6, 1, 2, // Bottom face
         0, 5, 4, 5, 0, 1, // Left face
