@@ -74,7 +74,7 @@ DescriptorBuilder& DescriptorBuilder::bindImageSampler(uint32_t binding, VkDescr
 
 DescriptorBuilder& DescriptorBuilder::bindImageArray(uint32_t binding, const std::vector<VkDescriptorImageInfo>& imageInfo, uint32_t count, VkDescriptorType type, VkShaderStageFlags stageFlags)
 {
-    // Create a desciptor set layout binding
+    // Create a descriptor set layout binding
     VkDescriptorSetLayoutBinding bind{};
 
     bind.descriptorCount = count;
