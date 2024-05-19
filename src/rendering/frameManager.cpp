@@ -5,6 +5,7 @@
 #include "rendering/rendering.hpp"
 #include "rendering/resources/memory.hpp"
 #include "core/settings.hpp"
+#include <boost/uuid/uuid_generators.hpp> // UUID's for descriptor sets
 
 
 frame_manager::frame_manager(rendering_system* core) : 
@@ -20,33 +21,52 @@ void frame_manager::initDescriptorBuilder()
     _descriptorBuilder = std::make_unique<DescriptorBuilder>();
 }
 
-void frame_manager::createDescriptorSets()
+boost::uuids::uuid frame_manager::compileDescriptorSet(std::vector<descriptorSetBindings>& singleFrameBindings)
 {
-    unsigned int framesinFlight = getSettingsData(_core->getScene()->getRegistry()).framesInFlight;
+    boost::uuids::uuid id = boost::uuids::random_generator()();
 
-    // MVP Matrices descriptor set
+    descriptorSets dSets;
 
-    auto& mvpDS = _bufferDescriptorSets;
-
-    mvpDS.type = descriptorSetType::MVP_MATRICES;
-    mvpDS.descriptorSets.resize(framesinFlight);
-
-    memoryBuffers& cameraBuffers = _core->getScene()->getRegistry().get<memoryBuffers>( _core->getScene()->getActiveCamera() );
-
-    _textureDiffuseDescriptorSets = _core->getTextureSystem().aggregateDescriptorTextureInfos(E_TextureType::DIFFUSE , kTextureArraySize);
-    _textureCubemapDescriptorSets = _core->getTextureSystem().aggregateDescriptorTextureInfos(E_TextureType::CUBEMAP, kCubemapArraySize);
-    VkDescriptorImageInfo& samplerDescriptor = _core->getTextureSystem().getTextureSamplerDescriptor();
-
-    for(size_t i = 0; i < framesinFlight; i++)
+    for(auto& descriptorSetBindings : singleFrameBindings)
     {
-	    DescriptorBuilder::begin(_descriptorLayoutCache.get(), _descriptorAllocator.get())
-		.bindBuffer(0, &cameraBuffers.buffers[i].descriptorInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
-        .bindBuffer(1, &getMemoryBuffer(descriptorSetType::MVP_MATRICES).buffers[i].descriptorInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
-        .bindImageSampler(2, &samplerDescriptor, VK_SHADER_STAGE_FRAGMENT_BIT)
-		.bindImageArray(3, _textureDiffuseDescriptorSets, kTextureArraySize, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_SHADER_STAGE_FRAGMENT_BIT)
-        .bindImageArray(4, _textureCubemapDescriptorSets, kCubemapArraySize, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_SHADER_STAGE_FRAGMENT_BIT)
-		.build(mvpDS.descriptorSets[i]);
+        DescriptorBuilder builder = DescriptorBuilder::begin(_descriptorLayoutCache.get(), _descriptorAllocator.get());
+        for(auto& binding : descriptorSetBindings)
+        {   
+            switch(binding.descriptorType)
+            {
+                case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+                    builder.bindBuffer(binding.binding, (VkDescriptorBufferInfo*)binding.data, binding.descriptorType, binding.stageFlags);
+                    break;
+                case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+                    if (binding.count == 1)
+                    {
+                        builder.bindImage(binding.binding, (VkDescriptorImageInfo*)binding.data, binding.descriptorType, binding.stageFlags);
+                    }
+                    else
+                    {
+                        builder.bindImageArray(binding.binding, (std::vector<VkDescriptorImageInfo>*)binding.data, binding.count, binding.descriptorType, binding.stageFlags);
+                    }
+                    break;
+                case VK_DESCRIPTOR_TYPE_SAMPLER:
+                    builder.bindImageSampler(binding.binding, (VkDescriptorImageInfo*)binding.data, binding.stageFlags);
+                    break;
+                default:
+                    throw std::runtime_error("Invalid descriptor type");
+            }
+        }
+        VkDescriptorSet descriptorSet;
+        builder.build(descriptorSet);
+        dSets.push_back(descriptorSet);
     }
+
+    _descriptorSets[id] = dSets;
+
+    return id;
+}
+
+descriptorSets& frame_manager::getDescriptorSet(boost::uuids::uuid id)
+{
+    return _descriptorSets[id];
 }
 
 void frame_manager::allocateUniformBuffers(uint32_t count)
@@ -69,6 +89,8 @@ memoryBuffers& frame_manager::getMemoryBuffer(descriptorSetType type)
     switch(type)
     {
         case descriptorSetType::MVP_MATRICES:
+            _bufferDescriptorSets.type = descriptorSetType::MVP_MATRICES;
+            _bufferDescriptorSets.descriptorSets.resize(getSettingsData(_core->getScene()->getRegistry()).framesInFlight);
             return _bufferDescriptorSets.buffer;
             break;
         default:
