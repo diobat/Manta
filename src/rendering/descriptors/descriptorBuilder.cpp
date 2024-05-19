@@ -72,7 +72,7 @@ DescriptorBuilder& DescriptorBuilder::bindImageSampler(uint32_t binding, VkDescr
     return bindImage(binding, samplerImageInfo, VK_DESCRIPTOR_TYPE_SAMPLER, stageFlags);
 }
 
-DescriptorBuilder& DescriptorBuilder::bindImageArray(uint32_t binding, const std::vector<VkDescriptorImageInfo>& imageInfo, uint32_t count, VkDescriptorType type, VkShaderStageFlags stageFlags)
+DescriptorBuilder& DescriptorBuilder::bindImageArray(uint32_t binding, std::vector<VkDescriptorImageInfo>* imageInfo, uint32_t count, VkDescriptorType type, VkShaderStageFlags stageFlags)
 {
     // Create a descriptor set layout binding
     VkDescriptorSetLayoutBinding bind{};
@@ -92,7 +92,7 @@ DescriptorBuilder& DescriptorBuilder::bindImageArray(uint32_t binding, const std
 
     write.descriptorCount = count;
     write.descriptorType = type;
-    write.pImageInfo = imageInfo.data();
+    write.pImageInfo = imageInfo->data();
     write.dstBinding = binding;
 
     writes.push_back(write);
