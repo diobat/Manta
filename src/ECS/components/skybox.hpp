@@ -8,7 +8,7 @@ struct Skybox
 {
     Model cube;
     image skyboxTexture;
-    bool active = false;
+    bool enabled = false;
 };
 
 Skybox createSkybox(std::shared_ptr<rendering_system> core, const std::string& path);

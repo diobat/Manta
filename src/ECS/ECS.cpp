@@ -136,11 +136,11 @@ void Scene::setActiveSkybox(const entt::entity& skybox)
     {
         if(entity == skybox)
         {
-            _registry.get<Skybox>(entity).active = true;
+            _registry.get<Skybox>(entity).enabled = true;
         }
         else
         {
-            _registry.get<Skybox>(entity).active = false;
+            _registry.get<Skybox>(entity).enabled = false;
         }
     }
 }
