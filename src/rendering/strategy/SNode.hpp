@@ -1,5 +1,7 @@
 #pragma once
 
+#include <boost/uuid/uuid.hpp>  // UUID's for descriptor sets
+
 class StrategyChain;
 
 class StrategyNode
@@ -27,6 +29,8 @@ public:
     RenderOpaqueNode(const StrategyChain* chain);
     void run() override;
     void prepare() override;
+private:
+    boost::uuids::uuid _ds; // One descriptor set per frame in flight
 };
 
 class renderGUIOnFrameStartNode : public StrategyNode
