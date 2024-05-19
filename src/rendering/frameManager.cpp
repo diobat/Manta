@@ -33,7 +33,8 @@ void frame_manager::createDescriptorSets()
 
     memoryBuffers& cameraBuffers = _core->getScene()->getRegistry().get<memoryBuffers>( _core->getScene()->getActiveCamera() );
 
-    _textureArrayDescriptorSets = _core->getTextureSystem().aggregateDescriptorTextureInfos(E_TextureType::DIFFUSE , kTextureArraySize);
+    _textureDiffuseDescriptorSets = _core->getTextureSystem().aggregateDescriptorTextureInfos(E_TextureType::DIFFUSE , kTextureArraySize);
+    _textureCubemapDescriptorSets = _core->getTextureSystem().aggregateDescriptorTextureInfos(E_TextureType::CUBEMAP, kCubemapArraySize);
     VkDescriptorImageInfo& samplerDescriptor = _core->getTextureSystem().getTextureSamplerDescriptor();
 
     for(size_t i = 0; i < framesinFlight; i++)
@@ -42,7 +43,8 @@ void frame_manager::createDescriptorSets()
 		.bindBuffer(0, &cameraBuffers.buffers[i].descriptorInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
         .bindBuffer(1, &getMemoryBuffer(descriptorSetType::MVP_MATRICES).buffers[i].descriptorInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
         .bindImageSampler(2, &samplerDescriptor, VK_SHADER_STAGE_FRAGMENT_BIT)
-		.bindImageArray(3, _textureArrayDescriptorSets, kTextureArraySize, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_SHADER_STAGE_FRAGMENT_BIT)
+		.bindImageArray(3, _textureDiffuseDescriptorSets, kTextureArraySize, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_SHADER_STAGE_FRAGMENT_BIT)
+        .bindImageArray(4, _textureCubemapDescriptorSets, kCubemapArraySize, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.build(mvpDS.descriptorSets[i]);
     }
 }

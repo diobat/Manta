@@ -14,23 +14,44 @@ StrategyNode::StrategyNode(const StrategyChain* chain) : _chain(chain)
 
 RenderSkyboxNode::RenderSkyboxNode(const StrategyChain* chain) : StrategyNode(chain)
 {
-    ;
+    _chain->core()->getPipelineSystem().createPipeline("skybox");
+
+    
 }
 
 void RenderSkyboxNode::run()
 {
-    // Render skybox
+    uint32_t currentFrame = _chain->currentFrame();
+
+    // Render request struct populating
+    renderRequest request;
+    request.commandBuffer = _chain->core()->getSwapChainSystem().getCommandBuffer(currentFrame);
+    request.renderPass = E_RenderPassType::COLOR_DEPTH;
+    request.framebuffer = _chain->core()->getSwapChainSystem().getFramebuffer(currentFrame);
+    request.extent = _chain->core()->getSwapChainSystem().getSwapChain().Extent;
+    request.pipeline = _chain->core()->getPipelineSystem().getPipeline("skybox");
+    _chain->core()->getFrameManager().updateUniformBuffers(currentFrame);
+    request.useTextureLibraryBinds = false;
+
+    // Descriptor sets
+    // MVP matrices
+    request.descriptorSets.push_back(_chain->core()->getFrameManager().getDescriptorSet(descriptorSetType::MVP_MATRICES, currentFrame));
+
+    // Cube model for skybox
+    Model& cube = _chain->core()->getModelMeshLibrary().createModelFromMesh("cube", shapes::cube::mesh(glm::vec3(1.0f)));
+    request.models = std::vector<Model>(6, cube);
+
+    // Record request
+    _chain->core()->getCommandBufferSystem().recordCommandBuffer(request);
 }
 
 void RenderSkyboxNode::prepare()
 {
-    // Prepare skybox
-    for(auto& skybox : _chain->core()->getRegistry().view<Skybox>())
-    {
-        // Prepare skybox
-    }
-    
-    
+    auto& skyboxEntities = _chain->core()->getRegistry().view<Skybox>();
+
+    Skybox& skybox = _chain->core()->getRegistry().get<Skybox>(*skyboxEntities.begin());
+
+
 }
 
 //// Opaque Node
@@ -52,9 +73,12 @@ void RenderOpaqueNode::run()
     request.extent = _chain->core()->getSwapChainSystem().getSwapChain().Extent;
     request.pipeline = _chain->core()->getPipelineSystem().getPipeline("basic");
     _chain->core()->getFrameManager().updateUniformBuffers(currentFrame);
-    request.descriptorSets.push_back(_chain->core()->getFrameManager().getDescriptorSet(descriptorSetType::MVP_MATRICES, currentFrame));
     request.useTextureLibraryBinds = true;
 
+    // Descriptor sets
+    request.descriptorSets.push_back(_chain->core()->getFrameManager().getDescriptorSet(descriptorSetType::MVP_MATRICES, currentFrame)); 
+
+    // Gather models
     auto& allModelsView = _chain->core()->getRegistry().view<Model>();
 
     // Reserve space for models and per model push constants so that pointers don't get invalidated later

@@ -12,8 +12,6 @@
 
 class rendering_system;
 
-
-
 enum class descriptorSetType : unsigned int
 {
     MVP_MATRICES,
@@ -28,7 +26,6 @@ struct bufferDescriptorSetData
     std::vector<VkDescriptorSet> descriptorSets;       // descriptor sets, one per frame in flight
     memoryBuffers buffer;
 };
-
 
 class frame_manager
 {
@@ -62,7 +59,10 @@ private:
     bufferDescriptorSetData& getBufferDescriptorSetData(descriptorSetType type);
 
     // Image descriptor sets
-    std::vector<VkDescriptorImageInfo> _textureArrayDescriptorSets;
+    std::vector<VkDescriptorImageInfo> _textureDiffuseDescriptorSets;
+    std::vector<VkDescriptorImageInfo> _textureCubemapDescriptorSets;
+
+    std::unordered_map<void*, std::vector<VkDescriptorSet>> _descriptorSets;
 
     std::unique_ptr<DescriptorBuilder> _descriptorBuilder;
 
