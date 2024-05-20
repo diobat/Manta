@@ -96,14 +96,26 @@ void moveCamera(entt::registry& registry, entt::entity camera, relativeDirection
     }
 }
 
-#include <iostream>
-
 void rotateCamera(entt::registry& registry, entt::entity camera, const glm::vec2& deltaRot)
 {
     auto& rot = registry.get<rotation>(camera).value;
     auto& camSet = registry.get<cameraSettings>(camera);
 
     glm::vec2 delta = deltaRot;
+
+    // // Calculate the current pitch from the quaternion
+    // float pitch = glm::pitch(rot);
+
+    // // Limit the pitch
+    // float maxPitch = glm::radians(89.0f);
+    // if(delta.y > 0.0f && pitch >= maxPitch)
+    // {
+    //     delta.y = 0.0f;
+    // }
+    // if(delta.y < 0.0f && pitch <= -maxPitch)
+    // {
+    //     delta.y = 0.0f;
+    // }
 
     // Limit the pitch
     if(delta.y > 0.0f && glm::eulerAngles(rot).y >= glm::radians(89.0f))
@@ -114,14 +126,19 @@ void rotateCamera(entt::registry& registry, entt::entity camera, const glm::vec2
     {
         delta.y = 0.0f;
     }
-    
+
     // vec2 to quaternion
-    glm::quat deltaQuat = glm::quat(glm::vec3(0.0f, 0.0f, 0.0f));
+    glm::quat yawQuat = glm::angleAxis(delta.y * camSet.rotationSpeed, glm::vec3(0.0f, 1.0f, 0.0f));   
+    glm::quat pitchQuat = glm::angleAxis(delta.x * camSet.rotationSpeed, glm::vec3(1.0f, 0.0f, 0.0f));  
 
-    deltaQuat = glm::rotate(deltaQuat, delta.x * camSet.rotationSpeed, glm::vec3(1.0f, 0.0f, 0.0f));
-    deltaQuat = glm::rotate(deltaQuat, delta.y * camSet.rotationSpeed, glm::vec3(0.0f, 1.0f, 0.0f));
+    // Apply the yaw rotation globally
+    rot = yawQuat * rot;
 
-    deltaRotation(registry, camera, deltaQuat);
+    // Apply the pitch rotation locally
+    rot = rot * pitchQuat;
+
+    // Normalize the quaternion
+    rot = glm::normalize(rot);
 }
 
 // A function that converts an euler angle rotation delta to a quaternion delta
