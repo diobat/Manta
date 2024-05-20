@@ -199,10 +199,8 @@ void command_buffer_system::recordCommandBuffer(const renderRequest& request)
         // Model specific push constants
         if(request.perModelPC.size() > 0)
         {
-            unsigned int modelID = * (unsigned int*) &request.perModelPC[i].data;
             vkCmdPushConstants(request.commandBuffer, request.pipeline.layout, request.perModelPC[i].stageFlags , request.perModelPC[i].offset, request.perModelPC[i].size, request.perModelPC[i].data);
         }
-
 
         for(auto& mesh : *request.models[i].meshes)
         {
