@@ -9,7 +9,6 @@ layout(set = 0, binding = 0) uniform UniformBufferObject {
 
 // Input
 layout (location = 0) in vec3 inPosition;
-
 // Output
 layout (location = 0) out vec3 TexCoords;
 

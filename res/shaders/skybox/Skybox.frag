@@ -1,9 +1,8 @@
 #version 450
 
 // Uniforms
-layout (set = 0, binding = 2) uniform sampler samp;
-layout (set = 0, binding = 3) uniform texture2D texDiffuse[4096];
-layout (set = 0, binding = 4) uniform textureCube texCubemap[64];
+layout (set = 0, binding = 1) uniform sampler samp;
+layout (set = 0, binding = 2) uniform textureCube texCubemap[64];
 
 // Inputs
 layout (location = 0) in vec3 TexCoords;
@@ -17,6 +16,6 @@ layout (push_constant) uniform PushConstantObject {
 
 void main()
 {    
-    vec4 color = texture(samplerCube(texCubemap[0], samp), TexCoords);
+    vec4 color = texture(samplerCube(texCubemap[pc.indexCubeTexture], samp), TexCoords);
     FragColor = color;
 }
