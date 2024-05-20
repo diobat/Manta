@@ -55,4 +55,8 @@ class PBSShadingStrategyChain : public StrategyChain
 public:
     PBSShadingStrategyChain(rendering_system* engine);
     bool reserveResources() override;
+private:
+    void bakeDiffuseIrradiance();
+    void bakeSpecularIrradiance();
+    void bakeBRDFLUT();
 };

@@ -46,7 +46,6 @@ namespace
 		{
 			glfwSetInputMode(renderWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 		}
-
 	}
 
 	void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods)

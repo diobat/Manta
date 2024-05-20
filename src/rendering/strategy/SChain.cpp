@@ -105,5 +105,26 @@ PBSShadingStrategyChain::PBSShadingStrategyChain(rendering_system* engine) : Str
 
 bool PBSShadingStrategyChain::reserveResources()
 {
+    // Create diffuse irradiance map
+    
+    // Create pre-filtered specular map
+    
+    // Create BRDF LUT
+
     return true;
+}
+
+void PBSShadingStrategyChain::bakeDiffuseIrradiance()
+{
+    // Create a cube map for the diffuse irradiance
+}
+
+void PBSShadingStrategyChain::bakeSpecularIrradiance()
+{
+    // Create a cube map for the specular irradiance
+}
+
+void PBSShadingStrategyChain::bakeBRDFLUT()
+{
+    // Create a 2D texture for the BRDF LUT
 }
