@@ -249,7 +249,7 @@ image texture_system::createTexture(const loadedImageDataHDR imgData, VkFormat f
 
 image texture_system::bakeCubemap(const std::string& filePath, bool addToCache)
 {
-    image img = createTexture(filePath, E_TextureType::CUBEMAP, false);
+    image img = createTexture(filePath, E_TextureType::DIFFUSE, false);
     
 
     return bakeCubemapFromFlat(img, addToCache);
@@ -357,7 +357,10 @@ image texture_system::bakeCubemapFromFlat(image flatImg, bool addToCache)
     _core->getCommandBufferSystem().submitCommandBuffer(requestInfo.commandBuffer, requestInfo.fence);
 
     // 7 - Add to cache
-    addTextureToCache(E_TextureType::CUBEMAP, img);
+    if(addToCache)
+    {
+        addTextureToCache(E_TextureType::CUBEMAP, img);
+    }
 
     // 8 - Cleanup
     vkWaitForFences(_core->getLogicalDevice(), 1, &requestInfo.fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
@@ -365,12 +368,6 @@ image texture_system::bakeCubemapFromFlat(image flatImg, bool addToCache)
     _core->getCommandBufferSystem().freeCommandBuffers(requestInfo.commandBuffer);
     vkDestroyFramebuffer(_core->getLogicalDevice(), framebuffer, nullptr);
     vkDestroyFence(_core->getLogicalDevice(), requestInfo.fence, nullptr);
-
-
-    if(addToCache)
-    {
-        addTextureToCache(E_TextureType::CUBEMAP, img);
-    }
 
     return img;
 }
