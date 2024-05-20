@@ -42,6 +42,16 @@ namespace
         3, 6, 2, 6, 3, 7  // Right face
     };
 
+    std::vector<unsigned int> cubeIndicesFlipped = {
+        0, 1, 2, 2, 3, 0, // Front face
+        4, 6, 5, 6, 4, 7, // Back face
+        0, 3, 7, 7, 4, 0, // Top face
+        1, 5, 6, 6, 2, 1, // Bottom face
+        0, 4, 5, 5, 1, 0, // Left face
+        3, 2, 6, 6, 7, 3  // Right face
+    };
+
+
 
     // Sphere
     bool sphereVertices_init = false;
@@ -52,7 +62,7 @@ namespace
     // The sphere is centered at the origin and drawn using triangle strips.
     // The sphere is drawn using the following parametric equation:
     // x = r * cos(theta) * sin(phi)
-    // y = r * sin(theta) * sin(phi)
+    // y = r * sin(theta) * sin(phi) 
     // z = r * cos(phi)
     // where theta is the angle around the y axis and phi is the angle around the x axis.
     unsigned int sphereVAO(unsigned int stacks, unsigned int slices, float radius)
@@ -170,6 +180,27 @@ namespace shapes
             return cubeMesh;
         }
 
+    }
+
+    namespace cube_flipped
+    {
+        Mesh mesh(const glm::vec3& color)
+        {
+            Mesh cubeMesh;
+
+            for (unsigned int i = 0; i < cubeVertices.size(); i += 3)
+            {
+                Vertex vertex;
+                vertex.Position = glm::vec3(cubeVertices[i], cubeVertices[i + 1], cubeVertices[i + 2]);
+                vertex.Color = glm::vec3(color[0], color[1], color[2]);
+                cubeMesh.vertexData.push_back(vertex);
+            }
+            cubeMesh.indexData = cubeIndicesFlipped;
+
+            cubeMesh.path = "CubeFlipped";
+
+            return cubeMesh;
+        }
     }
 
     namespace sphere

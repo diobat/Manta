@@ -21,6 +21,8 @@ public:
     RenderSkyboxNode(const StrategyChain* chain);
     void run() override;
     void prepare() override;
+private:
+    boost::uuids::uuid _ds; // One descriptor set per frame in flight
 };
 
 class RenderOpaqueNode : public StrategyNode

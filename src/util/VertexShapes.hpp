@@ -21,6 +21,11 @@ namespace shapes
         Mesh mesh(const glm::vec3& color = {1.0f, 1.0f, 1.0f});
     }
 
+    namespace cube_flipped
+    {
+        Mesh mesh(const glm::vec3& color = {1.0f, 1.0f, 1.0f});
+    }
+
     namespace sphere
     {
         unsigned int VAO();

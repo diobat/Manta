@@ -355,7 +355,7 @@ VkPipelineRasterizationStateCreateInfo pipeline_system::createRasterizerInfo()
     _rasterizer = {};
 
     _rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    _rasterizer.depthClampEnable = VK_FALSE;
+    _rasterizer.depthClampEnable = VK_TRUE;
     _rasterizer.rasterizerDiscardEnable = VK_FALSE;
     _rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     _rasterizer.lineWidth = 1.0f;
@@ -391,7 +391,7 @@ VkPipelineDepthStencilStateCreateInfo pipeline_system::createDepthStencilInfo()
     _depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     _depthStencil.depthTestEnable = VK_TRUE;
     _depthStencil.depthWriteEnable = VK_TRUE;
-    _depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+    _depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
     _depthStencil.depthBoundsTestEnable = VK_FALSE;
     _depthStencil.minDepthBounds = 0.0f; // Optional
     _depthStencil.maxDepthBounds = 1.0f; // Optional

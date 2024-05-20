@@ -99,7 +99,7 @@ void StrategyChain::endRenderPass()
 // PBSShadingStrategyChain
 PBSShadingStrategyChain::PBSShadingStrategyChain(rendering_system* engine) : StrategyChain(engine)
 {
-    // add(std::make_shared<RenderSkyboxNode>(this));
+    add(std::make_shared<RenderSkyboxNode>(this));
     add(std::make_shared<RenderOpaqueNode>(this));
 }
 

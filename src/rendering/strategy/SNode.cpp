@@ -15,10 +15,8 @@ StrategyNode::StrategyNode(const StrategyChain* chain) : _chain(chain)
 //// Skybox Node
 
 RenderSkyboxNode::RenderSkyboxNode(const StrategyChain* chain) : StrategyNode(chain)
-{
-    _chain->core()->getPipelineSystem().createPipeline("skybox");
-
-
+{   
+    ;
 }
 
 void RenderSkyboxNode::run()
@@ -37,11 +35,21 @@ void RenderSkyboxNode::run()
 
     // Descriptor sets
     // MVP matrices
-    request.descriptorSets.push_back(_chain->core()->getFrameManager().getDescriptorSet(descriptorSetType::MVP_MATRICES, currentFrame));
+    request.descriptorSets.push_back(_chain->core()->getFrameManager().getDescriptorSet(_ds)[currentFrame]);
+
+    // Push constants
+    auto& skyboxEntities = _chain->core()->getRegistry().view<Skybox>();
+    Skybox& skybox = _chain->core()->getRegistry().get<Skybox>(*skyboxEntities.begin());
+
+    PushConstant perModel_pc;
+    perModel_pc.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    perModel_pc.data = &skybox.skyboxTexture.id;
+    perModel_pc.size = sizeof(skybox.skyboxTexture.id);
+    perModel_pc.offset = PUSH_CONSTANT_FRAGMENT_OFFSET;
+    request.perModelPC.push_back(perModel_pc);
 
     // Cube model for skybox
-    Model& cube = _chain->core()->getModelMeshLibrary().createModelFromMesh("cube", shapes::cube::mesh(glm::vec3(1.0f)));
-    request.models = std::vector<Model>(6, cube);
+    request.models.push_back(_chain->core()->getModelMeshLibrary().createModelFromMesh("cubeFlipped", shapes::cube_flipped::mesh(glm::vec3(1.0f))));
 
     // Record request
     _chain->core()->getCommandBufferSystem().recordCommandBuffer(request);
@@ -49,11 +57,42 @@ void RenderSkyboxNode::run()
 
 void RenderSkyboxNode::prepare()
 {
-    auto& skyboxEntities = _chain->core()->getRegistry().view<Skybox>();
+    _chain->core()->getPipelineSystem().createPipeline("skybox");
 
-    Skybox& skybox = _chain->core()->getRegistry().get<Skybox>(*skyboxEntities.begin());
+    // Descriptor set
+    unsigned int framesinFlight = getSettingsData(_chain->core()->getScene()->getRegistry()).framesInFlight;
 
+    std::vector<descriptorSetBindings> allFramesBindings;
 
+    for(size_t i = 0; i < framesinFlight; i++)
+    {
+        descriptorSetBindings singleFrameBindings;
+
+        descriptorBindingData mvpMatricesBinding;
+        mvpMatricesBinding.binding = 0;
+        mvpMatricesBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        mvpMatricesBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        mvpMatricesBinding.data = &_chain->core()->getScene()->getRegistry().get<memoryBuffers>( _chain->core()->getScene()->getActiveCamera() ).buffers[i].descriptorInfo;
+        singleFrameBindings.push_back(mvpMatricesBinding);
+
+        descriptorBindingData sampler;
+        sampler.binding = 1;
+        sampler.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+        sampler.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+        sampler.data = &_chain->core()->getTextureSystem().getTextureSamplerDescriptor();
+        singleFrameBindings.push_back(sampler);
+
+        descriptorBindingData textureCubemap;
+        textureCubemap.binding = 2;
+        textureCubemap.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        textureCubemap.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+        textureCubemap.data = &_chain->core()->getTextureSystem().aggregateDescriptorTextureInfos(E_TextureType::CUBEMAP , kCubemapArraySize);
+        textureCubemap.count = kCubemapArraySize;
+        singleFrameBindings.push_back(textureCubemap);
+
+        allFramesBindings.push_back(singleFrameBindings);
+    }
+    _ds = _chain->core()->getFrameManager().compileDescriptorSet(allFramesBindings);
 }
 
 //// Opaque Node
@@ -147,14 +186,6 @@ void RenderOpaqueNode::prepare()
         textureDiffuse.data = &_chain->core()->getTextureSystem().aggregateDescriptorTextureInfos(E_TextureType::DIFFUSE , kTextureArraySize);
         textureDiffuse.count = kTextureArraySize;
         singleFrameBindings.push_back(textureDiffuse);
-
-        // descriptorBindingData textureCubemap;
-        // textureCubemap.binding = 4;
-        // textureCubemap.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-        // textureCubemap.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-        // textureCubemap.data = &_chain->core()->getTextureSystem().aggregateDescriptorTextureInfos(E_TextureType::CUBEMAP, kCubemapArraySize);
-        // textureCubemap.count = kCubemapArraySize;
-        // singleFrameBindings.push_back(textureCubemap);
 
         allFramesBindings.push_back(singleFrameBindings);
     }
