@@ -355,7 +355,7 @@ VkPipelineRasterizationStateCreateInfo pipeline_system::createRasterizerInfo()
     _rasterizer = {};
 
     _rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    _rasterizer.depthClampEnable = VK_TRUE;
+    _rasterizer.depthClampEnable = VK_FALSE;
     _rasterizer.rasterizerDiscardEnable = VK_FALSE;
     _rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     _rasterizer.lineWidth = 1.0f;
