@@ -1,4 +1,4 @@
-#include "rendering/resources/texture.hpp"
+#include "rendering/textureLibrary.hpp"
 
 #include "rendering/rendering.hpp"
 #include "util/modelImporter.hpp"

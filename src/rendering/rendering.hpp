@@ -11,7 +11,7 @@
 #include "rendering/modelLibrary.hpp"
 #include "rendering/commandBufferManager.hpp"
 #include "rendering/resources/memory.hpp"
-#include "rendering/resources/texture.hpp"
+#include "rendering/textureLibrary.hpp"
 #include "rendering/shaderManager.hpp"
 #include "rendering/pipelineManager.hpp"
 #include "rendering/swapChainManager.hpp"
