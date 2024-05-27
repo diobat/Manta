@@ -566,7 +566,6 @@ void texture_system::cleanup()
         }
     }
 
-    cleanupImage(_defaultTexture);
     vkDestroySampler(_core->getLogicalDevice(), _textureSampler, nullptr);
 }
 
