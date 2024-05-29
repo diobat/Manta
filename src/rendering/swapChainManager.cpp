@@ -162,7 +162,7 @@ void swap_chain_system::createDepthResources()
 
     _swapChain.depthImage.imageView = _core->getTextureSystem().createImageView(_swapChain.depthImage.image, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 
-    _core->getTextureSystem().transitionImageLayout(_swapChain.depthImage.image, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1);
+    _core->getTextureSystem().transitionImageLayout(_swapChain.depthImage, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 }
 
 void swap_chain_system::createFramebuffers()
