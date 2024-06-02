@@ -2,12 +2,14 @@
 
 #include "rendering/strategy/SNode.hpp"
 #include "rendering/rendering.hpp" 
+#include "ECS/components/skybox.hpp"
+
 
 StrategyChain::StrategyChain(rendering_system* core) : 
     _core(core),
     _firstRun(true)
 {
-    reserveResources();
+    ;
 }
 
 bool StrategyChain::add(std::shared_ptr<StrategyNode> node)
@@ -25,7 +27,8 @@ void StrategyChain::run()
 {
 
     if(_firstRun)
-    {
+    {    
+        reserveResources();
         reserveNodeResources();
         _firstRun = false;
     }
@@ -95,7 +98,6 @@ void StrategyChain::endRenderPass()
     _core->getSwapChainSystem().presentImage(_currentFrame);
 }
 
-
 // PBSShadingStrategyChain
 PBSShadingStrategyChain::PBSShadingStrategyChain(rendering_system* engine) : StrategyChain(engine)
 {
@@ -106,11 +108,18 @@ PBSShadingStrategyChain::PBSShadingStrategyChain(rendering_system* engine) : Str
 bool PBSShadingStrategyChain::reserveResources()
 {
     // Create diffuse irradiance map
-    
-    // Create pre-filtered specular map
-    
-    // Create BRDF LUT
 
+    auto& skyboxViews = _core->getRegistry().view<Skybox>();
+
+    Skybox& skybox = skyboxViews.get<Skybox>(*skyboxViews.begin());
+
+    skybox.irradianceMap = _core->getTextureSystem().bakeIrradianceDiffuseLightmap(skybox.texture, true);
+
+    // Create pre-filtered specular map
+    skybox.prefilteredMap = _core->getTextureSystem().bakeIrradianceSpecularLightmap(skybox.texture, true);
+
+    // Create BRDF LUT
+    
     return true;
 }
 

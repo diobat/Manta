@@ -3,8 +3,11 @@
 #include <memory>
 #include <list>
 
+#include "rendering/resources/texture.hpp"
+
 class rendering_system;
 class StrategyNode;
+
 
 class StrategyChain
 {

@@ -43,8 +43,8 @@ void RenderSkyboxNode::run()
 
     PushConstant perModel_pc;
     perModel_pc.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-    perModel_pc.data = &skybox.skyboxTexture.id;
-    perModel_pc.size = sizeof(skybox.skyboxTexture.id);
+    perModel_pc.data = &skybox.texture.id;
+    perModel_pc.size = sizeof(skybox.texture.id);
     perModel_pc.offset = PUSH_CONSTANT_FRAGMENT_OFFSET;
     request.perModelPC.push_back(perModel_pc);
 

@@ -8,7 +8,7 @@ Skybox createSkybox(std::shared_ptr<rendering_system> core, const std::string& p
     Skybox skybox;
 
     skybox.cube = shapes::cube::model();
-    skybox.skyboxTexture = core->getTextureSystem().bakeCubemap(path, true);
+    skybox.texture = core->getTextureSystem().bakeCubemap(path, true);
 
     return skybox;
 }

@@ -35,6 +35,10 @@ public:
     image bakeCubemap(const std::string& filePath, bool addToCache = true);
     image bakeCubemapFromFlat(image img, bool addToCache = true);
 
+    // Lightmaps
+    image bakeIrradianceDiffuseLightmap(image img, bool addToCache = true);
+    image bakeIrradianceSpecularLightmap(image img, bool addToCache = true);
+
 
     VkImageView createImageView(image& img, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels, VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D);
     VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels, VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D);
@@ -55,7 +59,7 @@ private:
 
     void addTextureToCache(const E_TextureType type, image& img);
     bool hasStencilComponent(VkFormat format) const;
-    void generateMipMaps(VkImage& image, VkFormat format, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels);
+    void generateMipMaps(VkImage& image, VkFormat format, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels, uint32_t layerCount = 1);
 
     image _defaultTexture; 
 

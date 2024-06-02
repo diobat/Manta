@@ -221,3 +221,11 @@ Putting every sub-component back together in the reflectance equation gives us
 $$L_0(p,\omega_o) = \int_\Omega (k_d\frac{c}{\pi} + \frac{NDF \cdot F \cdot G}{4 (\omega_o \cdot n)(\omega_i \cdot n)}) L_i(p,\omega_i) n \cdot \omega_i \space d\omega_i $$
 
 Thus we finally arrive at the final equation that describes a physically based rendering model
+
+### Diffuse Irradiance
+
+TO DO 
+
+### Specular Irradiance 
+
+TO DO
