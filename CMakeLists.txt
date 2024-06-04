@@ -163,7 +163,7 @@ set(Boost_USE_STATIC_RUNTIME OFF)
 
 FetchContent_Declare(
     Boost 
-    URL https://github.com/boostorg/boost/releases/download/boost-1.84.0/boost-1.84.0.7z
+    URL https://github.com/boostorg/boost/releases/download/boost-1.84.0/boost-1.84.0.tar.gz
     USES_TERMINAL_DOWNLOAD TRUE 
     GIT_PROGRESS TRUE   
     DOWNLOAD_NO_EXTRACT FALSE

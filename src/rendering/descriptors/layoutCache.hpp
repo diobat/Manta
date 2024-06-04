@@ -6,6 +6,7 @@
 #include "rendering/descriptors/descriptorParams.hpp"
 
 #include <unordered_map>
+#include <vector>
 
 class DescriptorLayoutCache
 {

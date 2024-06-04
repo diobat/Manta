@@ -38,7 +38,7 @@ void RenderSkyboxNode::run()
     request.descriptorSets.push_back(_chain->core()->getFrameManager().getDescriptorSet(_ds)[currentFrame]);
 
     // Push constants
-    auto& skyboxEntities = _chain->core()->getRegistry().view<Skybox>();
+    auto skyboxEntities = _chain->core()->getRegistry().view<Skybox>();
     Skybox& skybox = _chain->core()->getRegistry().get<Skybox>(*skyboxEntities.begin());
 
     PushConstant perModel_pc;
@@ -120,7 +120,7 @@ void RenderOpaqueNode::run()
     request.descriptorSets.push_back(_chain->core()->getFrameManager().getDescriptorSet(_ds)[currentFrame]); 
 
     // Gather models
-    auto& allModelsView = _chain->core()->getRegistry().view<Model>();
+    auto allModelsView = _chain->core()->getRegistry().view<Model>();
 
     // Reserve space for models and per model push constants so that pointers don't get invalidated later
     request.models.reserve(allModelsView.size());

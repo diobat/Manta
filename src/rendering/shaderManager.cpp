@@ -141,7 +141,7 @@ shaderModule shader_system::compileShader(const std::string& path)
     shader.setStrings(&shaderCodeCStr, 1);
     shader.setEnvInput(glslang::EShSourceGlsl, stage, glslang::EShClient::EShClientVulkan, glslang::EShTargetClientVersion::EShTargetVulkan_1_3);
     shader.setEnvClient(glslang::EShClient::EShClientVulkan, glslang::EShTargetClientVersion::EShTargetVulkan_1_3);
-    shader.setEnvTarget(glslang::EShTargetLanguage::EShTargetSpv, glslang::EShTargetLanguageVersion::EShTargetSpv_1_4);
+    shader.setEnvTarget(glslang::EShTargetLanguage::EShTargetSpv, glslang::EShTargetLanguageVersion::EShTargetSpv_1_3);
 
     auto includer = glslang::TShader::ForbidIncluder{};
 

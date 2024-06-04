@@ -10,7 +10,7 @@ class Manta;
 class Scene
 {
 public:
-    Scene::Scene(Manta* _core, entt::registry& registry);
+    Scene(Manta* _core, entt::registry& registry);
 
     entt::registry& getRegistry();
 

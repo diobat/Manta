@@ -281,7 +281,7 @@ std::vector<VkPipelineShaderStageCreateInfo> pipeline_system::createShaderStages
     return _shaderStages;
 }
 
-VkPipelineVertexInputStateCreateInfo pipeline_system::createVertexInputInfo()
+VkPipelineVertexInputStateCreateInfo& pipeline_system::createVertexInputInfo()
 {
     // VkPipelineVertexInputStateCreateInfo temp{};
 
@@ -307,7 +307,7 @@ VkPipelineVertexInputStateCreateInfo pipeline_system::createVertexInputInfo()
     return _vertexInputInfo;
 }
 
-VkPipelineInputAssemblyStateCreateInfo pipeline_system::createInputAssemblyInfo()
+VkPipelineInputAssemblyStateCreateInfo& pipeline_system::createInputAssemblyInfo()
 {
     VkPipelineInputAssemblyStateCreateInfo temp{};
 
@@ -320,7 +320,7 @@ VkPipelineInputAssemblyStateCreateInfo pipeline_system::createInputAssemblyInfo(
     return _inputAssembly;
 }
 
-VkPipelineDynamicStateCreateInfo pipeline_system::createDynamicStateInfo()
+VkPipelineDynamicStateCreateInfo& pipeline_system::createDynamicStateInfo()
 {
     _dynamicStates.clear();
     _dynamicStates = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
@@ -336,7 +336,7 @@ VkPipelineDynamicStateCreateInfo pipeline_system::createDynamicStateInfo()
     return _dynamicState;
 }
 
-VkPipelineViewportStateCreateInfo pipeline_system::createViewportStateInfo()
+VkPipelineViewportStateCreateInfo& pipeline_system::createViewportStateInfo()
 {
     _viewportState = {};
 
@@ -350,7 +350,7 @@ VkPipelineViewportStateCreateInfo pipeline_system::createViewportStateInfo()
     return _viewportState;
 }
 
-VkPipelineRasterizationStateCreateInfo pipeline_system::createRasterizerInfo()
+VkPipelineRasterizationStateCreateInfo& pipeline_system::createRasterizerInfo()
 {
     _rasterizer = {};
 
@@ -369,7 +369,7 @@ VkPipelineRasterizationStateCreateInfo pipeline_system::createRasterizerInfo()
     return _rasterizer;
 }
 
-VkPipelineMultisampleStateCreateInfo pipeline_system::createMultisamplingInfo()
+VkPipelineMultisampleStateCreateInfo& pipeline_system::createMultisamplingInfo()
 {
     _multisampling = {};
 
@@ -384,7 +384,7 @@ VkPipelineMultisampleStateCreateInfo pipeline_system::createMultisamplingInfo()
     return _multisampling;
 }
 
-VkPipelineDepthStencilStateCreateInfo pipeline_system::createDepthStencilInfo()
+VkPipelineDepthStencilStateCreateInfo& pipeline_system::createDepthStencilInfo()
 {
     _depthStencil = {};
 
@@ -402,7 +402,7 @@ VkPipelineDepthStencilStateCreateInfo pipeline_system::createDepthStencilInfo()
     return _depthStencil;
 }
 
-VkPipelineColorBlendStateCreateInfo pipeline_system::createColorBlendingInfo()
+VkPipelineColorBlendStateCreateInfo& pipeline_system::createColorBlendingInfo()
 {
     _colorBlendAttachment = {};
 
@@ -430,7 +430,7 @@ VkPipelineColorBlendStateCreateInfo pipeline_system::createColorBlendingInfo()
     return _colorBlending;
 }
 
-VkPipelineLayout pipeline_system::createPipelineLayout(const std::vector<VkDescriptorSetLayout>& descriptorSetLayout, const std::vector<VkPushConstantRange>& pushConstantRanges)
+VkPipelineLayout& pipeline_system::createPipelineLayout(const std::vector<VkDescriptorSetLayout>& descriptorSetLayout, const std::vector<VkPushConstantRange>& pushConstantRanges)
 {
     
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};

@@ -349,7 +349,7 @@ image texture_system::bakeCubemapFromFlat(image flatImg, bool addToCache)
     requestInfo.descriptorSets.push_back(textureDescriptorSet);
 
     // Get the cube model
-    Model& cube = _core->getModelMeshLibrary().createModelFromMesh("cube", shapes::cube::mesh(glm::vec3(1.0f)));
+    Model cube = _core->getModelMeshLibrary().createModelFromMesh("cube", shapes::cube::mesh(glm::vec3(1.0f)));
     requestInfo.models = std::vector<Model>(6, cube);
 
     int faces[] = {0, 1, 2, 3, 4, 5};
@@ -466,7 +466,7 @@ image texture_system::bakeIrradianceDiffuseLightmap(image img, bool addToCache)
     requestInfo.descriptorSets.push_back(textureDescriptorSet);
 
     // 6c - Get the cube model
-    Model& cube = _core->getModelMeshLibrary().createModelFromMesh("cube", shapes::cube::mesh(glm::vec3(1.0f)));
+    Model cube = _core->getModelMeshLibrary().createModelFromMesh("cube", shapes::cube::mesh(glm::vec3(1.0f)));
     requestInfo.models = std::vector<Model>(6, cube);
 
     // 7 - Record the command buffer
