@@ -6,7 +6,7 @@
 int main() {
     Manta engine;
 
-    engine.loadSkybox("res/models/lightmap/meadow_4k.hdr", true);
+    engine.loadSkybox("res/models/lightmap/garden_nook_4k.hdr", true);
 
     engine.loadModel("res/models/room/viking_room.glb", {3.0f, 3.0f, 0.0f}, {0.0f, 45.0f, 0.0f}, {1.0f, 1.0f, 1.0f});
     engine.loadModel("res/models/room/viking_room.glb", {-3.0f, 3.0f, 0.0f}, {0.0f, 45.0f, 0.0f}, {1.0f, 1.0f, 1.0f});

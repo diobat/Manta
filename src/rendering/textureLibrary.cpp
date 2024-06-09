@@ -2,6 +2,7 @@
 
 #include "rendering/rendering.hpp"
 #include "util/modelImporter.hpp"
+#include "helpers/RootDir.hpp"
 
 #include "util/VertexShapes.hpp"
 #include "ECS/components/spatial.hpp"
@@ -16,8 +17,8 @@ texture_system::texture_system(rendering_system* rendering) :
 void texture_system::init()
 {
     initTextureSampler();
-    _defaultTexture = createTexture("X:/Repos/Manta/res/missingTexture.png",E_TextureType::DIFFUSE , true);
-    _defaultTexture = createTexture("X:/Repos/Manta/res/missingTexture.png",E_TextureType::CUBEMAP , true);
+    _defaultTexture = createTexture(ROOT_DIR + std::string("/res/missingTexture.png"),E_TextureType::DIFFUSE , true);
+    _defaultTexture = createTexture(ROOT_DIR + std::string("/res/missingTexture.png"),E_TextureType::CUBEMAP , true);
 }
 
 void texture_system::initTextureSampler()
@@ -267,7 +268,6 @@ image texture_system::bakeCubemap(const std::string& filePath, bool addToCache)
 {
     image img = createTexture(filePath, E_TextureType::DIFFUSE, false);
     
-
     return bakeCubemapFromFlat(img, addToCache);
 }
 
