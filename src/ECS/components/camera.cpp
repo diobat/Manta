@@ -7,7 +7,7 @@ namespace{
     constexpr float height = 600.0f;
     constexpr float nearPlane = 0.1f;
     constexpr float farPlane = 100.0f;
-    constexpr float translationSpeed = 0.01f;
+    constexpr float translationSpeed = 0.1f;
     constexpr float rotationSpeed = 0.0005f;
 }
 
