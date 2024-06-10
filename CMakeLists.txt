@@ -92,7 +92,7 @@ FetchContent_Declare(
 )
 option(ASSIMP_BUILD_TESTS OFF)
 set(ASSIMP_NO_EXPORT ON CACHE BOOL "Disable Assimp's export functionality")
-set(ASSIMP_BUILD_ALL_EXPORTERS_BY_DEFAULT OFF CACHE BOOL "Disable Assimp's export functionality")
+set(ASSIMP_BUILD_ALL_EXPORTERS_BY_DEFAULT OFF CACHE BOOL "Disable Assimp's export functionality") 
 option(ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT OFF)
 set(ASSIMP_BUILD_OBJ_IMPORTER ON)
 set(ASSIMP_BUILD_GLTF_IMPORTER ON)
