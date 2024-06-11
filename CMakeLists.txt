@@ -6,6 +6,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Set policies
+cmake_policy(SET CMP0135 NEW) # Link directories must be absolute
+
 # Configure assets header file
 configure_file(src/helpers/RootDir.h.in src/helpers/RootDir.hpp)
 
@@ -151,6 +154,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan::Vulkan)
 # as a pre-compiled library and link it to our project.
 message(STATUS "Downloading pre-compiled boost library sources.")
 set(FETCHCONTENT_QUIET TRUE) # Sets the output level of the build process to terminal
+
 option(DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
 
 set(BOOST_INCLUDE_LIBRARIES uuid filesystem)
