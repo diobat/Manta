@@ -7,6 +7,8 @@
 #include "util/VertexShapes.hpp"
 #include "ECS/components/spatial.hpp"
 
+#include <cmath>
+
 texture_system::texture_system(rendering_system* rendering) :
     _core(rendering),
     _mipLevels(1)
@@ -17,8 +19,8 @@ texture_system::texture_system(rendering_system* rendering) :
 void texture_system::init()
 {
     initTextureSampler();
-    _defaultTexture = createTexture(ROOT_DIR + std::string("/res/missingTexture.png"),E_TextureType::DIFFUSE , true);
-    _defaultTexture = createTexture(ROOT_DIR + std::string("/res/missingTexture.png"),E_TextureType::CUBEMAP , true);
+    createTexture(ROOT_DIR + std::string("/res/missingTexture.png"),E_TextureType::DIFFUSE , true);
+    createTexture(ROOT_DIR + std::string("/res/missingTexture.png"),E_TextureType::CUBEMAP , true);
 }
 
 void texture_system::initTextureSampler()
@@ -80,7 +82,7 @@ image texture_system::createImage(uint32_t width, uint32_t height, uint32_t mipL
     VkImageCreateInfo imageInfo = {};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageInfo.imageType = VK_IMAGE_TYPE_2D;
-    
+
     imageInfo.extent.width = width;
     imageInfo.extent.height = height;
     imageInfo.extent.depth = 1;
@@ -97,11 +99,11 @@ image texture_system::createImage(uint32_t width, uint32_t height, uint32_t mipL
         imageInfo.arrayLayers = 1;
         img.layers = 1;
     }
-    
+
     imageInfo.format = format;
     imageInfo.tiling = tiling;
 
-    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;    
+    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     imageInfo.usage = usage;
 
     imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -248,7 +250,7 @@ image texture_system::createTexture(const loadedImageDataHDR imgData, VkFormat f
     _core->getMemorySystem().freeBuffer(stagingBuffer);
 
     // Populate the image view
-    createTextureImageView(img, format);
+    createTextureImageView(img, format, type);
 
     // Populate the descriptor image info
     img.descriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -267,7 +269,7 @@ image texture_system::createTexture(const loadedImageDataHDR imgData, VkFormat f
 image texture_system::bakeCubemap(const std::string& filePath, bool addToCache)
 {
     image img = createTexture(filePath, E_TextureType::DIFFUSE, false);
-    
+
     return bakeCubemapFromFlat(img, addToCache);
 }
 
@@ -286,7 +288,7 @@ image texture_system::bakeCubemapFromFlat(image flatImg, bool addToCache)
     image img = createImage(size_width, size_height, 1, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, true);
 
     // 2 - Create Cubemap image view
-    createImageView(img, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_IMAGE_VIEW_TYPE_CUBE);
+    createImageView(img, true, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, VK_IMAGE_VIEW_TYPE_CUBE);
 
     // 3 - Populate the descriptor image info
     img.descriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -320,7 +322,7 @@ image texture_system::bakeCubemapFromFlat(image flatImg, bool addToCache)
         cubemapPipeline = _core->getPipelineSystem().getPipeline("equi2cube");
     }
     catch(const std::exception& e)
-    {   
+    {
         _core->getPipelineSystem().createPipeline("equi2cube", E_RenderPassType::CUBE_MAP);
         cubemapPipeline = _core->getPipelineSystem().getPipeline("equi2cube");
     }
@@ -355,7 +357,7 @@ image texture_system::bakeCubemapFromFlat(image flatImg, bool addToCache)
     int faces[] = {0, 1, 2, 3, 4, 5};
 
     for (int i = 0; i < 6; i++)
-    {   
+    {
         PushConstant pcModel;
         pcModel.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
         pcModel.data = &faces[i];
@@ -402,7 +404,7 @@ image texture_system::bakeIrradianceDiffuseLightmap(image img, bool addToCache)
     image lightmap = createImage(size_width, size_height, 1, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, true);
 
     // 2 - Create Irradiance Lightmap image view
-    createImageView(lightmap, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_IMAGE_VIEW_TYPE_CUBE);
+    createImageView(lightmap, true, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, VK_IMAGE_VIEW_TYPE_CUBE);
 
     // 3 - Populate the descriptor image info
     lightmap.descriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -430,13 +432,13 @@ image texture_system::bakeIrradianceDiffuseLightmap(image img, bool addToCache)
         throw std::runtime_error("Failed to create framebuffer!");
     }
 
-    // 5 - Fetch the irradiance lightmap pipeline
+    // 5 - Fetch the diffuse irradiance lightmap pipeline
     shaderPipeline lightmapPipeline;
     try{
         lightmapPipeline = _core->getPipelineSystem().getPipeline("irradianceDiffuse");
     }
     catch(const std::exception& e)
-    {   
+    {
         _core->getPipelineSystem().createPipeline("irradianceDiffuse", E_RenderPassType::CUBE_MAP);
         lightmapPipeline = _core->getPipelineSystem().getPipeline("irradianceDiffuse");
     }
@@ -475,7 +477,7 @@ image texture_system::bakeIrradianceDiffuseLightmap(image img, bool addToCache)
     int faces[] = {0, 1, 2, 3, 4, 5};
 
     for (int i = 0; i < 6; i++)
-    {   
+    {
         PushConstant pcModel;
         pcModel.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
         pcModel.data = &faces[i];
@@ -511,81 +513,190 @@ image texture_system::bakeIrradianceSpecularLightmap(image img, bool addToCache)
     }
 
     // 1 - Create Specular Lightmap image
-    uint32_t size_width = 256;
-    uint32_t size_height = 256;
+    uint32_t size_width = 1024;
+    uint32_t size_height = 1024;
 
-    image lightMap = createImage(size_width, size_height, 1, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, true);
+    uint32_t mipLevels = 5;
 
-    // 2 - Create Specular Lightmap image view
-    createImageView(lightMap, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_IMAGE_VIEW_TYPE_CUBE);
+    std::vector<uint32_t> size_widths(mipLevels, size_width);
+    std::vector<uint32_t> size_heights(mipLevels, size_height);
+
+    for(int i = 1; i <= mipLevels; i++)
+    {
+        size_widths[i] = size_width / pow(2, i);
+        size_heights[i] = size_height / pow(2, i);
+    }
+    
+
+    image lightMap = createImage(size_width, size_height, mipLevels + 1, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, true);
+
+    // 2 - Create Specular Lightmap image views
+
+    std::vector<VkImageView> imageViews;
+
+    // Create one imageview for each miplevel so we can attach them seperately to the framebuffer
+    // and render to them one at a time
+    for (int z(0) ; z <= mipLevels ; z++)
+    {
+        imageViews.push_back(createImageView(lightMap, false, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, z, 1, VK_IMAGE_VIEW_TYPE_CUBE));
+    }
+
+    // Also create a general imageview for the lightmap for when it is used as a texture in a shader
+    createImageView(lightMap, true, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, 0, mipLevels + 1, VK_IMAGE_VIEW_TYPE_CUBE);
 
     // 3 - Populate the descriptor image info
     lightMap.descriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     lightMap.descriptor.imageView = lightMap.imageView;
     lightMap.descriptor.sampler = _textureSampler;
 
-    // Transition the skybox image to transfer source optimal
-    transitionImageLayout(img, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-    // Transition the lightmap image to transfer destination optimal
-    transitionImageLayout(lightMap, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    // 4 - Create Irradiance Lightmap Framebuffers
+    std::vector <VkFramebuffer> framebuffers;
 
-    // 3 - Blit the skybox image into the lightmap
-    VkCommandBuffer commandBuffer = _core->getCommandBufferSystem().beginSingleTimeCommands();
+    for (int z(0) ; z <= mipLevels ; ++z)
+    {
+        VkFramebuffer framebuffer;
+        
+        std::array<VkImageView, 1> attachments = {
+            imageViews[z]
+        };
 
-    VkImageBlit blit{};
-    // Define the dimensions of the source image
-    blit.srcOffsets[0] = {0, 0, 0};
-    blit.srcOffsets[1] = {static_cast<int32_t>(img.width), static_cast<int32_t>(img.height), 1};
-    // Define the component and level number of the source image
-    blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    blit.srcSubresource.mipLevel = 0;
-    blit.srcSubresource.baseArrayLayer = 0;
-    blit.srcSubresource.layerCount = img.layers;
+        VkFramebufferCreateInfo framebufferInfo{};
+        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass = _core->getPipelineSystem().getRenderPass(E_RenderPassType::CUBE_MAP);
+        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+        framebufferInfo.pAttachments = attachments.data();
+        framebufferInfo.width = size_widths[z];
+        framebufferInfo.height = size_heights[z];
+        framebufferInfo.layers = 6;
 
-    // Define the dimensions of the destination image
-    blit.dstOffsets[0] = {0, 0, 0};
-    blit.dstOffsets[1] = {static_cast<int32_t>(lightMap.width), static_cast<int32_t>(lightMap.height), 1};
-    // Define the component and level number of the destination image
-    blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    blit.dstSubresource.mipLevel = 0;
-    blit.dstSubresource.baseArrayLayer = 0;
-    blit.dstSubresource.layerCount = lightMap.layers;
+        if(vkCreateFramebuffer(_core->getLogicalDevice(), &framebufferInfo, nullptr, &framebuffer) != VK_SUCCESS)
+        {
+            throw std::runtime_error("Failed to create framebuffer!");
+        }
 
-    vkCmdBlitImage(commandBuffer,
-        img.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-        lightMap.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        1, &blit,
-        VK_FILTER_LINEAR);
+        framebuffers.push_back(framebuffer);
+    }
 
-    _core->getCommandBufferSystem().endSingleTimeCommands(commandBuffer);
+    // 5 - Fetch the specular irradiance lightmap pipeline
+    shaderPipeline lightmapPipeline;
+    try{
+        lightmapPipeline = _core->getPipelineSystem().getPipeline("irradianceSpecular");
+    }
+    catch(const std::exception& e)
+    {
+        _core->getPipelineSystem().createPipeline("irradianceSpecular", E_RenderPassType::CUBE_MAP);
+        lightmapPipeline = _core->getPipelineSystem().getPipeline("irradianceSpecular");
+    }
 
-    // Transition the skybox image to shader read only optimal
-    transitionImageLayout(img, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    // 6a - Setup the rendering request for the lightmap
+    renderRequest requestInfo;
+    requestInfo.commandBuffer = _core->getCommandBufferSystem().generateCommandBuffer();
+    requestInfo.renderPass = E_RenderPassType::CUBE_MAP;
+    requestInfo.pipeline = lightmapPipeline;
 
-    // Generate the mipmaps for the lightmap
-    transitionImageLayout(lightMap, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    VkFenceCreateInfo fenceInfo{};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    vkCreateFence(_core->getLogicalDevice(), &fenceInfo, nullptr, &requestInfo.fence);
 
-    generateMipMaps(lightMap.image, VK_FORMAT_R8G8B8A8_SRGB, size_width, size_height, 1, 6);
 
+    // ViewPorts and Scissors
 
+    std::vector<VkViewport> viewports;
+    std::vector<VkRect2D> scissors;
 
-    // Add to cache
+    for (int z(0) ; z <= mipLevels ; z++)
+    {
+        VkViewport viewport = {0.0f, 0.0f, static_cast<float>(size_widths[z]), static_cast<float>(size_heights[z]), 0.0f, 1.0f};
+        viewports.push_back(viewport);
+
+        VkRect2D scissor = {{0, 0}, {size_widths[z], size_heights[z]}};
+        scissors.push_back(scissor);
+    }
+
+    // 6b - Populate the descriptor image info
+    VkDescriptorSet textureDescriptorSet;
+    _core->getFrameManager().getReadyDescriptorBuilder()
+        .bindImage(0, &img.descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+        .build(textureDescriptorSet);
+
+    requestInfo.descriptorSets.push_back(textureDescriptorSet);
+
+    // 6c - Get the cube model
+    Model cube = _core->getModelMeshLibrary().createModelFromMesh("cube", shapes::cube::mesh(glm::vec3(1.0f)));
+    requestInfo.models = std::vector<Model>(6, cube);
+
+    // 7 - Record the command buffer
+
+    int faces[] = {0, 1, 2, 3, 4, 5};
+
+    for(int i = 0; i < 6; i++)
+    {
+        PushConstant pcModel;
+        pcModel.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        pcModel.data = &faces[i];
+        pcModel.size = sizeof(int);
+        pcModel.offset = PUSH_CONSTANT_VERTEX_OFFSET;
+        requestInfo.perModelPC.push_back(pcModel);
+    }
+
+    for(int currentMipLevel = 0; currentMipLevel <= mipLevels; currentMipLevel++)
+    {
+
+        requestInfo.extent = {size_widths[currentMipLevel], size_heights[currentMipLevel]};
+
+        requestInfo.viewport = viewports[currentMipLevel];
+        requestInfo.scissor = scissors[currentMipLevel];
+
+        requestInfo.framebuffer = framebuffers[currentMipLevel];
+
+        PushConstant pcLightmap;
+        pcLightmap.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+        pcLightmap.data = &currentMipLevel;
+        pcLightmap.size = sizeof(int);
+        pcLightmap.offset = PUSH_CONSTANT_FRAGMENT_OFFSET;
+        requestInfo.generalPC = pcLightmap;
+
+        _core->getCommandBufferSystem().beginRecordingCommandBuffer(requestInfo.commandBuffer, requestInfo.renderPass, requestInfo.framebuffer, requestInfo.extent);
+        _core->getCommandBufferSystem().recordCommandBuffer(requestInfo);
+        _core->getCommandBufferSystem().endRecordingCommandBuffer(requestInfo.commandBuffer);
+        _core->getCommandBufferSystem().submitCommandBuffer(requestInfo.commandBuffer, requestInfo.fence);
+        vkWaitForFences(_core->getLogicalDevice(), 1, &requestInfo.fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+    }
+
+    // 8 - Add to cache
     if(addToCache)
     {
         addTextureToCache(E_TextureType::CUBEMAP, lightMap);
+    }
+
+    // 9 - Cleanup
+    vkWaitForFences(_core->getLogicalDevice(), 1, &requestInfo.fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+    vkDestroyFence(_core->getLogicalDevice(), requestInfo.fence, nullptr);
+    for (auto framebuffer : framebuffers)
+    {
+        vkDestroyFramebuffer(_core->getLogicalDevice(), framebuffer, nullptr);
+    }
+    for (auto imageView : imageViews)
+    {
+        vkDestroyImageView(_core->getLogicalDevice(), imageView, nullptr);
     }
 
 
     return lightMap;
 }
 
-VkImageView texture_system::createImageView(image& img, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels, VkImageViewType viewType)
+VkImageView texture_system::createImageView(image& img, bool updateImageAttribute, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t baseMipLevel, uint32_t mipLevels, VkImageViewType viewType)
 {
-    img.imageView = createImageView(img.image, format, aspectFlags, mipLevels, viewType);
-    return img.imageView;
+    VkImageView imageViewCreated = createImageView(img.image, format, aspectFlags, baseMipLevel, mipLevels, viewType);
+    if(updateImageAttribute)
+    {
+        img.imageView = imageViewCreated;
+    }
+    return imageViewCreated;
 }
 
-VkImageView texture_system::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels, VkImageViewType viewType)
+VkImageView texture_system::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t baseMipLevel, uint32_t mipLevels, VkImageViewType viewType)
 {
     VkImageViewCreateInfo viewInfo = {};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -593,7 +704,7 @@ VkImageView texture_system::createImageView(VkImage image, VkFormat format, VkIm
     viewInfo.viewType = viewType;
     viewInfo.format = format;
     viewInfo.subresourceRange.aspectMask = aspectFlags;
-    viewInfo.subresourceRange.baseMipLevel = 0;
+    viewInfo.subresourceRange.baseMipLevel = baseMipLevel;
     viewInfo.subresourceRange.levelCount = mipLevels;
     viewInfo.subresourceRange.baseArrayLayer = 0;
 
@@ -616,9 +727,21 @@ VkImageView texture_system::createImageView(VkImage image, VkFormat format, VkIm
     return imageView;
 }
 
-VkImageView texture_system::createTextureImageView(image& img, VkFormat format)
+VkImageView texture_system::createTextureImageView(image& img, VkFormat format, E_TextureType type)
 {
-    return createImageView(img, format, VK_IMAGE_ASPECT_COLOR_BIT, img.mipLevels);
+    VkImageView createdImageView;
+
+    switch(type)
+    {
+        case E_TextureType::CUBEMAP:
+            createdImageView = createImageView(img, true, format, VK_IMAGE_ASPECT_COLOR_BIT, 0, img.mipLevels, VK_IMAGE_VIEW_TYPE_CUBE);
+            break;
+        default:
+            createdImageView = createImageView(img, true, format, VK_IMAGE_ASPECT_COLOR_BIT, 0, img.mipLevels, VK_IMAGE_VIEW_TYPE_2D);
+            break;
+    }
+
+    return createdImageView;
 }
 
 std::vector<VkDescriptorImageInfo>& texture_system::aggregateDescriptorTextureInfos(E_TextureType type, size_t returnVectorSize)
@@ -649,7 +772,7 @@ std::vector<VkDescriptorImageInfo>& texture_system::aggregateDescriptorTextureIn
     {
         for(size_t i = imageInfos.size(); i < returnVectorSize; i++)
         {
-            imageInfos.push_back(_defaultTexture.descriptor);
+            imageInfos.push_back(_textures[type]->at(0).descriptor);
         }
     }
 
@@ -682,7 +805,7 @@ void texture_system::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t 
 
 void texture_system::transitionImageLayout(image& image, VkImageLayout newLayout)
 {
-   
+
     VkImageMemoryBarrier barrier = {};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     barrier.oldLayout = image.layout;
@@ -752,11 +875,11 @@ void texture_system::transitionImageLayout(image& image, VkImageLayout newLayout
     VkCommandBuffer commandBuffer =  _core->getCommandBufferSystem().beginSingleTimeCommands();
 
     vkCmdPipelineBarrier(
-        commandBuffer, 
-        sourceStage, destinationStage, 
-        0, 
-        0, nullptr, 
-        0, nullptr, 
+        commandBuffer,
+        sourceStage, destinationStage,
+        0,
+        0, nullptr,
+        0, nullptr,
         1, &barrier);
 
     _core->getCommandBufferSystem().endSingleTimeCommands(commandBuffer);
@@ -876,10 +999,10 @@ void texture_system::generateMipMaps(VkImage& image, VkFormat format, uint32_t w
         blit.dstSubresource.baseArrayLayer = 0;
         blit.dstSubresource.layerCount = layerCount;
 
-        vkCmdBlitImage(commandBuffer, 
-        image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 
-        image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
-        1, &blit, 
+        vkCmdBlitImage(commandBuffer,
+        image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        1, &blit,
         VK_FILTER_LINEAR);
 
         // Transition the previous mip level to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL because after this moment

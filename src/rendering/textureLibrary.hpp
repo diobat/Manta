@@ -39,16 +39,21 @@ public:
     image bakeIrradianceDiffuseLightmap(image img, bool addToCache = true);
     image bakeIrradianceSpecularLightmap(image img, bool addToCache = true);
 
+    // BRDF LUT
+    image bakeBRDF_LUT(uint32_t width, uint32_t height, bool addToCache = true);
+    image* getBRDF_LUT();
 
-    VkImageView createImageView(image& img, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels, VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D);
-    VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels, VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D);
+    // ImageViews
+    VkImageView createImageView(image& img, bool updateImageAttribute ,VkFormat format, VkImageAspectFlags aspectFlags, uint32_t baseMiplevel, uint32_t mipLevels, VkImageViewType viewType);
+    VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t baseMipLevel, uint32_t mipLevels, VkImageViewType viewType);
+    VkImageView createTextureImageView(image& img, VkFormat format = VK_FORMAT_R8G8B8A8_SRGB, E_TextureType type = E_TextureType::DIFFUSE);
 
-    VkImageView createTextureImageView(image& img, VkFormat format = VK_FORMAT_R8G8B8A8_SRGB);
-
+    // Descriptor sets
     std::vector<VkDescriptorImageInfo>& aggregateDescriptorTextureInfos(E_TextureType type,  size_t returnVectorSize);
 
     // Exists temporarily as some older code depends on overloading with a different signature
     void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+
     void transitionImageLayout(image& image, VkImageLayout newLayout);
 
     // Resource release functions
@@ -61,14 +66,14 @@ private:
     bool hasStencilComponent(VkFormat format) const;
     void generateMipMaps(VkImage& image, VkFormat format, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels, uint32_t layerCount = 1);
 
-    image _defaultTexture; 
-
     std::unordered_map<E_TextureType, std::shared_ptr<std::vector<image>>> _textures;
     std::unordered_map<E_TextureType, std::vector<VkDescriptorImageInfo>> _textureDescriptors;
 
     uint32_t _mipLevels = 1;                                // mip levels
     VkSampler _textureSampler;
     VkDescriptorImageInfo _textureSamplerDescriptor;
+
+    image* _brdfLUT_id = nullptr;
 
     rendering_system* _core;
 };  

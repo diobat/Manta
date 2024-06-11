@@ -107,18 +107,19 @@ PBSShadingStrategyChain::PBSShadingStrategyChain(rendering_system* engine) : Str
 
 bool PBSShadingStrategyChain::reserveResources()
 {
-    // Create diffuse irradiance map
 
     auto skyboxViews = _core->getRegistry().view<Skybox>();
 
     Skybox& skybox = skyboxViews.get<Skybox>(*skyboxViews.begin());
 
+    // Create diffuse irradiance map
     skybox.irradianceMap = _core->getTextureSystem().bakeIrradianceDiffuseLightmap(skybox.texture, true);
 
     // Create pre-filtered specular map
     skybox.prefilteredMap = _core->getTextureSystem().bakeIrradianceSpecularLightmap(skybox.texture, true);
 
     // Create BRDF LUT
+    
     
     return true;
 }

@@ -3,3 +3,4 @@
 *.spv
 *.spv
 res/models
+res/shaders/irradianceSpecular/imgui.ini
