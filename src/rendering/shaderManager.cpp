@@ -133,7 +133,8 @@ shaderModule shader_system::compileShader(const std::string& path)
 
     // Create glslang shader object
     glslang::TShader shader{stage};
-    shader.setDebugInfo(true);
+    shader.setDebugInfo(false);
+
 
     std::string shaderCode = readGLSLFile(path);
     const char* shaderCodeCStr = shaderCode.data();
