@@ -19,6 +19,7 @@ const unsigned int PUSH_CONSTANT_FRAGMENT_OFFSET = 128;
 enum class E_RenderPassType : unsigned int
 {
     COLOR_DEPTH,                // 1 color 1 depth no stencil
+    COLOR,                      // 1 color no depth no stencil
     CUBE_MAP,                   // 1 color no depth no stencil
     SIZE
 };
