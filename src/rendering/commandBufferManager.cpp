@@ -180,13 +180,16 @@ void command_buffer_system::recordCommandBuffer(const renderRequest& request)
     vkCmdSetScissor(request.commandBuffer, 0, 1, &scissor);
 
     // Descriptor set
-    vkCmdBindDescriptorSets(request.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, request.pipeline.layout, 
-        0, 
-        request.descriptorSets.size(), 
-        &request.descriptorSets[0], 
-        0, 
-        nullptr);
-
+    if (request.descriptorSets.size() != 0)
+    {
+        vkCmdBindDescriptorSets(request.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, request.pipeline.layout, 
+            0, 
+            request.descriptorSets.size(), 
+            &request.descriptorSets[0], 
+            0, 
+            nullptr);
+    }
+    
     // General push constant
     if(request.generalPC.size > 0)
     {
