@@ -9,13 +9,39 @@ namespace
     // Quad
     bool quadVertices_init = false;
     unsigned int quadVAO_nr, quadVBO_nr;
-    float quadVertices[] = {
+    // float quadVertices[] = {
+    //     // positions        // texture Coords
+    //     -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+    //     -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+    //     1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+    //     1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+    // };
+
+    Mesh quadMesh;
+    bool quadMesh_init = false;
+
+    Model quadModel;
+    bool quadModel_init = false;
+
+    std::vector<float> quadVertices = {
         // positions        // texture Coords
-        -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
-        -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
-        1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
-        1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+        -1.0f,  1.0f, 0.0f, 
+        -1.0f, -1.0f, 0.0f, 
+         1.0f,  1.0f, 0.0f, 
+         1.0f, -1.0f, 0.0f
     };
+    std::vector<float> quatTextureCoords = {
+        0.0f, 1.0f,
+        0.0f, 0.0f,
+        1.0f, 1.0f,
+        1.0f, 0.0f
+    };
+
+    std::vector<unsigned int> quadIndices = {
+        0, 2, 1,
+        2, 3, 1
+    };
+
 
     // Cube
     bool cubeModel_init = false;
@@ -120,13 +146,23 @@ namespace shapes
 {
     namespace quad
     {
-        unsigned int VAO()
+        Mesh mesh()
         {
-            if (!quadVertices_init)
+            if (!quadMesh_init)
             {
-                ;
+                quadMesh_init = true;
+                for(unsigned int i = 0; i < quadVertices.size()/3; i++)
+                {
+                    Vertex vertex;
+                    vertex.Position = glm::vec3(quadVertices[i*3], quadVertices[i*3 + 1], quadVertices[i*3 + 2]);
+                    vertex.TexCoords = glm::vec2(quadVertices[i*2], quadVertices[i*2 + 1]);
+                    quadMesh.vertexData.push_back(vertex);
+                }
+                quadMesh.indexData = quadIndices;
+
+                quadMesh.path = "Quad";
             }
-            return quadVAO_nr;
+            return quadMesh;
         }
     }
 

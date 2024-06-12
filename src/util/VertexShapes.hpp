@@ -12,7 +12,8 @@ namespace shapes
 {
     namespace quad
     {
-        unsigned int VAO();
+        Model model();
+        Mesh mesh();
     }
 
     namespace cube
