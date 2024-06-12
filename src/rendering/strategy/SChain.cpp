@@ -116,10 +116,11 @@ bool PBSShadingStrategyChain::reserveResources()
     skybox.irradianceMap = _core->getTextureSystem().bakeIrradianceDiffuseLightmap(skybox.texture, true);
 
     // Create pre-filtered specular map
+    
     skybox.prefilteredMap = _core->getTextureSystem().bakeIrradianceSpecularLightmap(skybox.texture, true);
 
     // Create BRDF LUT
-    
+    _core->getTextureSystem().bakeBRDF_LUT(true);
     
     return true;
 }

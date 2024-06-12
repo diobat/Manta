@@ -40,7 +40,7 @@ public:
     image bakeIrradianceSpecularLightmap(image img, bool addToCache = true);
 
     // BRDF LUT
-    image bakeBRDF_LUT(uint32_t width, uint32_t height, bool addToCache = true);
+    image bakeBRDF_LUT(bool addToCache = true);
     image* getBRDF_LUT();
 
     // ImageViews

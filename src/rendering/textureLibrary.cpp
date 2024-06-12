@@ -599,7 +599,6 @@ image texture_system::bakeIrradianceSpecularLightmap(image img, bool addToCache)
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
     vkCreateFence(_core->getLogicalDevice(), &fenceInfo, nullptr, &requestInfo.fence);
 
-
     // ViewPorts and Scissors
 
     std::vector<VkViewport> viewports;
@@ -684,6 +683,97 @@ image texture_system::bakeIrradianceSpecularLightmap(image img, bool addToCache)
 
 
     return lightMap;
+}
+
+image texture_system::bakeBRDF_LUT(bool addToCache)
+{
+    
+    // 0 - Define the image size
+    uint32_t size_width = 512;
+    uint32_t size_height = 512;
+
+    // 1 - Create the image
+    image brdfLUT = createImage(size_width, size_height, 1, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, true);
+
+    // 2 - Create the image view
+    createImageView(brdfLUT, true, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, VK_IMAGE_VIEW_TYPE_2D);
+
+    // 3 - Populate the descriptor image info
+    brdfLUT.descriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    brdfLUT.descriptor.imageView = brdfLUT.imageView;
+    brdfLUT.descriptor.sampler = _textureSampler;
+
+    // 4 - Create the framebuffer
+    VkFramebuffer framebuffer;
+
+    std::array<VkImageView, 1> attachments = {
+        brdfLUT.imageView
+    };
+
+    VkFramebufferCreateInfo framebufferInfo{};
+    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebufferInfo.renderPass = _core->getPipelineSystem().getRenderPass(E_RenderPassType::COLOR);
+    framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+    framebufferInfo.pAttachments = attachments.data();
+    framebufferInfo.width = size_width;
+    framebufferInfo.height = size_height;
+    framebufferInfo.layers = 1;
+
+    if(vkCreateFramebuffer(_core->getLogicalDevice(), &framebufferInfo, nullptr, &framebuffer) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to create framebuffer!");
+    }
+
+    // 5 - Fetch the BRDF LUT pipeline
+    shaderPipeline brdfLUTPipeline;
+    try{
+        brdfLUTPipeline = _core->getPipelineSystem().getPipeline("brdfLUT");
+    }
+    catch(const std::exception& e)
+    {
+        _core->getPipelineSystem().createPipeline("brdfLUT", E_RenderPassType::COLOR);
+        brdfLUTPipeline = _core->getPipelineSystem().getPipeline("brdfLUT");
+    }
+
+    // 6 - Setup the rendering request for the BRDF LUT
+    renderRequest requestInfo;
+    requestInfo.commandBuffer = _core->getCommandBufferSystem().generateCommandBuffer();
+    requestInfo.renderPass = E_RenderPassType::COLOR;
+    requestInfo.framebuffer = framebuffer;
+    requestInfo.extent = {size_width, size_height};
+    requestInfo.pipeline = brdfLUTPipeline;
+
+    VkFenceCreateInfo fenceInfo{};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    vkCreateFence(_core->getLogicalDevice(), &fenceInfo, nullptr, &requestInfo.fence);
+
+    // Viewport and Scissor
+    requestInfo.viewport = {0.0f, 0.0f, static_cast<float>(size_width), static_cast<float>(size_height), 0.0f, 1.0f};
+    requestInfo.scissor = {{0, 0}, {size_width, size_height}};
+
+    // 6b - Get the quad model
+    Model quad = _core->getModelMeshLibrary().createModelFromMesh("quad", shapes::quad::mesh());
+    requestInfo.models = std::vector<Model>(1, quad);
+
+    // 7 - Record the command buffer
+    _core->getCommandBufferSystem().beginRecordingCommandBuffer(requestInfo.commandBuffer, requestInfo.renderPass, requestInfo.framebuffer, requestInfo.extent);
+    _core->getCommandBufferSystem().recordCommandBuffer(requestInfo);
+    _core->getCommandBufferSystem().endRecordingCommandBuffer(requestInfo.commandBuffer);
+    _core->getCommandBufferSystem().submitCommandBuffer(requestInfo.commandBuffer, requestInfo.fence);
+
+    // 8 - Add to cache
+    if(addToCache)
+    {
+        addTextureToCache(E_TextureType::DIFFUSE, brdfLUT);
+    }
+
+    // 9 - Cleanup
+    vkWaitForFences(_core->getLogicalDevice(), 1, &requestInfo.fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+    vkDestroyFence(_core->getLogicalDevice(), requestInfo.fence, nullptr);
+    vkDestroyFramebuffer(_core->getLogicalDevice(), framebuffer, nullptr);
+
+    return brdfLUT;
 }
 
 VkImageView texture_system::createImageView(image& img, bool updateImageAttribute, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t baseMipLevel, uint32_t mipLevels, VkImageViewType viewType)
