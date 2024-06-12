@@ -164,8 +164,13 @@ shaderModule shader_system::compileShader(const std::string& path)
         ;
     }
 
+    // Link in a program to remove unused code
+    glslang::TProgram program;
+    program.addShader(&shader);
+    program.link(EShMsgDefault);
+
     // Convert the shader to SPIR-V
-    glslang::TIntermediate* intermediate = shader.getIntermediate();
+    glslang::TIntermediate* intermediate = program.getShaders(stage).front()->getIntermediate();
     spv::SpvBuildLogger logger;
     glslang::GlslangToSpv(*intermediate, module.code, &logger);
 
